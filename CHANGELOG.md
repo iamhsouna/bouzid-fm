@@ -3,6 +3,15 @@
 All notable changes to the 2.0 line. This is a clean rewrite of Bouzid FM:
 Google-only, TUI-first, with the real mastered station imaging.
 
+## 1.3.1 (2026-06-16)
+
+- **Populated music playlists for all 8 crates.** Researched and verified Anghami
+  playlist URLs for morning (سبع بهارات, Arabic lounge), daytime (Top in Tunisia),
+  afternoon (Top in Tunisia 2025), evening (Top Anghami Arabic), night (Tarab
+  Aseel-Ectrik), overnight (Arabic Chill & Lounge 2025), Friday (Just Fayrouz),
+  and weekend (مهرجانات جديده). Replaced old "Good Morning" English playlist with
+  Arabic lounge. Also cleaned up stale n8n vars from `.env`.
+
 ## 1.3.0 (2026-06-16)
 
 - **Removed n8n entirely.** The n8n workflow was redundant — the Python stack

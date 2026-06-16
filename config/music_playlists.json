@@ -3,43 +3,43 @@
   "quality": "128",
   "crates": {
     "morning": {
-      "label": "Morning - calm Arabic chill",
-      "default": "",
-      "override": "https://play.anghami.com/playlist/13588867"
+      "label": "Morning - calm Arabic lounge & chill",
+      "default": "https://play.anghami.com/playlist/9748643",
+      "override": ""
     },
     "daytime": {
-      "label": "Daytime - Top in Tunisia mix",
-      "default": "",
+      "label": "Daytime - Top in Tunisia",
+      "default": "https://play.anghami.com/playlist/61205610",
       "override": ""
     },
     "afternoon": {
-      "label": "Afternoon - Tunisian (shaabi/malouf)",
-      "default": "",
+      "label": "Afternoon - Tunisia trending 2025",
+      "default": "https://play.anghami.com/playlist/286632002",
       "override": ""
     },
     "evening": {
-      "label": "Evening - Tarab Khaleeji",
-      "default": "",
+      "label": "Evening - Top Arabic hits",
+      "default": "https://play.anghami.com/playlist/5891475",
       "override": ""
     },
     "night": {
-      "label": "Night - Tarab Aseel (best of)",
-      "default": "",
+      "label": "Night - Tarab modern & classic",
+      "default": "https://play.anghami.com/playlist/199770463",
       "override": ""
     },
     "overnight": {
       "label": "Overnight - Arabic chill & lounge",
-      "default": "",
+      "default": "https://play.anghami.com/playlist/277956603",
       "override": ""
     },
     "friday": {
-      "label": "Friday - classic Tarab / Malouf",
-      "default": "",
+      "label": "Friday - classic Fayrouz & Tarab",
+      "default": "https://play.anghami.com/playlist/1006118",
       "override": ""
     },
     "weekend": {
       "label": "Weekend - Arabic party & dance",
-      "default": "",
+      "default": "https://play.anghami.com/playlist/221542422",
       "override": ""
     }
   }
