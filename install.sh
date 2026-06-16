@@ -151,12 +151,17 @@ python3 scripts/build_n8n.py || true
 
 # --- 5) Install the bouzid CLI ---------------------------------------------
 blue "Installing 'bouzid' CLI to /usr/local/bin ..."
-# Only the launcher needs the exec bit. The Python scripts are always invoked
-# via `python3 <script>.py`, so we deliberately do NOT chmod them — doing so
-# would flip their git file-mode and make every later `git pull` complain about
-# "local changes" on files you never edited.
-chmod +x bin/bouzid install.sh
-sudo ln -sf "$INSTALL_DIR/bin/bouzid" /usr/local/bin/bouzid
+# Install the launcher as a tiny WRAPPER script (NOT a symlink). A symlink to
+# bin/bouzid only works while that file keeps its executable bit — but git
+# stores it non-executable, so every `git pull` that changes bin/bouzid strips
+# the bit and `bouzid` dies with "Permission denied". The wrapper runs the repo
+# script through `bash`, so the launcher never depends on that bit again.
+chmod +x install.sh 2>/dev/null || true
+sudo tee /usr/local/bin/bouzid >/dev/null <<EOF
+#!/usr/bin/env bash
+exec bash "${INSTALL_DIR}/bin/bouzid" "\$@"
+EOF
+sudo chmod +x /usr/local/bin/bouzid
 
 # --- 6) Launch the stack ----------------------------------------------------
 # free port 80 if a host web server grabbed it (e.g. nginx from a prior run)

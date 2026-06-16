@@ -3,6 +3,20 @@
 All notable changes to the 2.0 line. This is a clean rewrite of Bouzid FM:
 Google-only, TUI-first, with the real mastered station imaging.
 
+## 1.2.5 (2026-06-16)
+
+- **Fixed for good: `bouzid` no longer dies with "Permission denied" after a
+  pull.** The CLI was installed as a *symlink* to `bin/bouzid`, which only works
+  while that file keeps its executable bit — but files come down from git
+  non-executable, so every `git pull` that changed `bin/bouzid` stripped the bit
+  and broke the command until you re-ran `chmod +x`. The installer now drops a
+  tiny *wrapper* at `/usr/local/bin/bouzid` that runs the repo script through
+  `bash`, so the launcher never depends on that executable bit again. On an
+  existing machine, run once:
+  `sudo tee /usr/local/bin/bouzid >/dev/null <<'EOF'` /
+  `#!/usr/bin/env bash` / `exec bash "$HOME/bouzid-fm/bin/bouzid" "$@"` / `EOF`
+  then `sudo chmod +x /usr/local/bin/bouzid`.
+
 ## 1.2.4 (2026-06-16)
 
 - **New: `bouzid music-reset` — make AzuraCast use only your current music.**
