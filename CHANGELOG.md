@@ -3,6 +3,21 @@
 All notable changes to the 2.0 line. This is a clean rewrite of Bouzid FM:
 Google-only, TUI-first, with the real mastered station imaging.
 
+## 1.6.0 (2026-06-17)
+
+- **Production-grade imaging prompts for all 21 shows.** Every show now has
+  its own curated entry in `scripts/make_imaging.py` with key, BPM, detailed
+  instrumentation, bar-by-bar arrangement structure, and thematic stings.
+  Previously 16 shows fell back to auto-generated generic defaults.
+- **16 new curated shows (`CURATED`):** news, ramadan, farmer, health, family,
+  horoscope, quiz, didyouknow, songstory, word, figures, home, prayer, events,
+  proverb, budget — each with custom voice, bed prompt, transition, 3 stings,
+  and Arabic intro/outro scripts.
+- **Existing 5 shows + station upgraded** with production-level detail (key,
+  tempo, arrangement sections, specific instruments).
+- **Voice assignments curated** across Gemini TTS's 28-voice roster for best
+  thematic fit per show.
+
 ## 1.5.0 (2026-06-16)
 
 - **Auto-scheduler** (`scripts/scheduler.py`). Polls `schedule_data.json` every
