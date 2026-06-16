@@ -75,8 +75,10 @@ KINDS = ["bed", "intro", "outro", "transition", "sting"]
 KIND_ORDER = {"bed": 0, "intro": 1, "outro": 2, "transition": 3, "sting": 4}
 STING_LUFS = audio_mix.DEFAULTS.get("lufs", -12.0)
 
-WHOOSH = ("short, clean, modern radio station whoosh transition sting, "
-          "punchy, no vocals, instrumental")
+WHOOSH = (
+    "short, clean, modern radio station whoosh transition sting, "
+    "punchy, no vocals, instrumental"
+)
 
 DEFAULT_STINGS = [
     "bright radio bumper sting, rising synth and a clean hit, energetic, "
@@ -87,26 +89,30 @@ DEFAULT_STINGS = [
 ]
 
 # --------------------------------------------------------------------------- #
-#  Curated prompts/scripts for the well-known shows. Anything not listed here
+#  Curated prompts/scripts for every show. Anything not listed here
 #  (or overridden by a preset "imaging" block) is synthesized from the name.
 #  Keys: voice, bed, intro, outro, transition, transition_secs,
 #        stings (list), sting_count, sting_secs.
+#
+#  Each bed prompt is production-grade: key, BPM, instrumentation, arrangement,
+#  mood — Lyria 3 receives "Instrumental only, no vocals, no lyrics..." prefix
+#  automatically (see lyria_music.generate), so "instrumental" / "no vocals"
+#  are included only for clarity at the model level.
+#  Each sting/transition prompt is designed for a ~2.5–3 s short edit.
 # --------------------------------------------------------------------------- #
 STATION = {
-    "name": "\u0628\u0648\u0632\u064a\u062f \u0625\u0641 \u0625\u0645",
+    "name": "بوزيد إف إم",
     "voice": "Kore",
-    "bed": "warm, confident Tunisian radio station music bed, oud and light "
-           "percussion over a steady modern groove, uplifting, no vocals, "
-           "instrumental broadcast imaging",
-    "intro": "\u0628\u0648\u0632\u064a\u062f \u0625\u0641 \u0625\u0645\u060c "
-             "\u0635\u0648\u062a \u0633\u064a\u062f\u064a \u0628\u0648\u0632\u064a\u062f "
-             "\u0648\u0627\u0644\u062c\u0647\u0629. \u0623\u062e\u0628\u0627\u0631\u060c "
-             "\u0648\u062b\u0642\u0627\u0641\u0629\u060c \u0648\u0645\u0648\u0633\u064a\u0642\u0649\u060c "
-             "\u0639\u0644\u0649 \u0645\u062f\u0627\u0631 \u0627\u0644\u064a\u0648\u0645.",
-    "outro": "\u0643\u0627\u0646 \u0645\u0639\u0643\u0645 \u0628\u0648\u0632\u064a\u062f "
-             "\u0625\u0641 \u0625\u0645. \u0634\u0643\u0631\u0627\u064b \u0639\u0644\u0649 "
-             "\u0627\u0644\u0645\u062a\u0627\u0628\u0639\u0629\u060c \u0648\u0625\u0644\u0649 "
-             "\u0627\u0644\u0644\u0642\u0627\u0621.",
+    "bed": (
+        "Warm, confident Tunisian radio station music bed in D minor, 90 BPM. "
+        "Rich oud melody with light hand percussion (darbouka, riq) over warm "
+        "pad strings and a steady kick-hat groove. Elegant and uplifting, "
+        "broadcast-ready. Arrangement: gentle intro (4 bars) -> main theme "
+        "(8 bars) -> variation (8 bars) -> return to theme (8 bars) -> soft "
+        "outro (4 bars). No vocals."
+    ),
+    "intro": "بوزيد إف إم، صوت سيدي بوزيد والجهة. أخبار، وثقافة، وموسيقى، على مدار اليوم.",
+    "outro": "كان معكم بوزيد إف إم. شكراً على المتابعة، وإلى اللقاء.",
     "transition": WHOOSH, "transition_secs": 2.8,
     "stings": [
         "bright radio bumper sting, rising synth and a clean hit, energetic, "
@@ -122,77 +128,591 @@ STATION = {
 }
 
 CURATED = {
+    # -- 1. COOK --
     "cook": {
         "voice": "Aoede",
-        "bed": "light, warm cooking-show music bed, playful acoustic guitar "
-               "and soft hand percussion, cheerful and homely, no vocals, "
-               "instrumental",
-        "intro": "\u0643\u0648\u0643 \u0645\u0639 \u0625\u064a\u0651\u0629\u060c "
-                 "\u0639\u0644\u0649 \u0628\u0648\u0632\u064a\u062f \u0625\u0641 \u0625\u0645. "
-                 "\u0627\u0644\u064a\u0648\u0645 \u0646\u0637\u064a\u0651\u0628\u0648 "
-                 "\u0648\u0635\u0641\u0629 \u062a\u0648\u0646\u0633\u064a\u0629 "
-                 "\u0628\u0646\u064a\u0646\u0629 \u0648\u0633\u0627\u0647\u0644\u0629.",
-        "outro": "\u0628\u0627\u0644\u0635\u062d\u0629 \u0648\u0627\u0644\u0647\u0646\u0627. "
-                 "\u0643\u0627\u0646 \u0645\u0639\u0627\u0643\u0645 \u0628\u0631\u0646\u0627\u0645\u062c "
-                 "\u0643\u0648\u0643 \u0645\u0639 \u0625\u064a\u0651\u0629 \u0639\u0644\u0649 "
-                 "\u0628\u0648\u0632\u064a\u062f \u0625\u0641 \u0625\u0645.",
-        "transition": "short cheerful kitchen transition sting, light acoustic "
-                      "flourish, instrumental", "transition_secs": 2.8,
+        "bed": (
+            "Light, warm cooking-show music bed in G major, 98 BPM. "
+            "Nylon-string acoustic guitar fingerpicking a gentle arpeggio pattern, "
+            "soft brushed snare and hi-hat, warm upright piano comping, light "
+            "shaker percussion. Cheerful and homely. Arrangement: intro (4 bars) "
+            "-> verse (8 bars) -> chorus (8 bars) -> verse (8 bars) -> "
+            "chorus (8 bars) -> outro (4 bars). No vocals."
+        ),
+        "intro": "كوك مع إيّة، على بوزيد إف إم. اليوم نطيّبو وصفة تونسية بنينة وساهلة.",
+        "outro": "بالصحة والهنا. كان معاكم برنامج كوك مع إيّة على بوزيد إف إم.",
+        "transition": (
+            "short cheerful kitchen transition sting, bright acoustic guitar "
+            "chime and a soft percussive hit, warm and inviting, instrumental"
+        ),
+        "transition_secs": 2.6,
+        "stings": [
+            "bright acoustic guitar strum with a light percussive hit, warm "
+            "kitchen vibe, instrumental",
+            "cheerful marimba and shaker sting, playful and homely, "
+            "instrumental",
+            "gentle rising chime into a soft clap, warm and friendly, "
+            "instrumental",
+        ],
+        "sting_secs": 2.8,
     },
+    # -- 2. SIDI BOUZID --
     "sidibouzid": {
         "voice": "Charon",
-        "bed": "cinematic documentary music bed, warm strings and a subtle "
-               "oud, reflective and dignified, slow build, no vocals, "
-               "instrumental",
-        "intro": "\u062d\u0643\u0627\u064a\u0629 \u0633\u064a\u062f\u064a "
-                 "\u0628\u0648\u0632\u064a\u062f\u060c \u0639\u0644\u0649 "
-                 "\u0628\u0648\u0632\u064a\u062f \u0625\u0641 \u0625\u0645. "
-                 "\u0642\u0635\u0629 \u0645\u0646 \u062a\u0627\u0631\u064a\u062e "
-                 "\u0627\u0644\u0645\u062f\u064a\u0646\u0629 \u0648\u0627\u0644\u062c\u0647\u0629.",
-        "outro": "\u0625\u0644\u0649 \u0647\u0646\u0627 \u062a\u0646\u062a\u0647\u064a "
-                 "\u062d\u0643\u0627\u064a\u0629 \u0627\u0644\u064a\u0648\u0645\u060c "
-                 "\u0645\u0646 \u0628\u0648\u0632\u064a\u062f \u0625\u0641 \u0625\u0645.",
-        "transition": "epic cinematic documentary impact transition sting, "
-                      "deep and dignified, instrumental", "transition_secs": 2.6,
+        "bed": (
+            "Cinematic documentary music bed in C minor, 76 BPM. "
+            "Warm sustained string ensemble with a subtle oud counter-melody, "
+            "soft piano chords, and a slow, deliberate kick-snare pulse. "
+            "Reflective and dignified, building in texture across the full "
+            "duration. Arrangement: sparse intro (4 bars) -> theme (8 bars) -> "
+            "strings build (8 bars) -> full ensemble (8 bars) -> fade (4 bars)."
+            " No vocals."
+        ),
+        "intro": "حكاية سيدي بوزيد، على بوزيد إف إم. قصة من تاريخ المدينة والجهة.",
+        "outro": "إلى هنا تنتهي حكاية اليوم، من بوزيد إف إم.",
+        "transition": (
+            "epic cinematic documentary impact transition sting, deep "
+            "cellos and a brass swell, dignified, instrumental"
+        ),
+        "transition_secs": 2.6,
+        "stings": [
+            "cinematic brass and string stab, deep and resonant, "
+            "documentary style, instrumental",
+            "slow dramatic riser into a soft timpani hit, dignified, "
+            "instrumental",
+            "warm string swell with a delicate piano note, reflective, "
+            "instrumental",
+        ],
+        "sting_secs": 3.0,
     },
+    # -- 3. FOLKTALE --
     "folktale": {
         "voice": "Sulafat",
-        "bed": "mystical traditional storytelling music bed, soft flute and "
-               "gentle hand percussion, dreamy and warm, no vocals, "
-               "instrumental",
-        "intro": "\u062d\u0643\u0627\u064a\u0629 \u0648\u062d\u0643\u0627\u064a\u0629\u060c "
-                 "\u0639\u0644\u0649 \u0628\u0648\u0632\u064a\u062f \u0625\u0641 \u0625\u0645.",
-        "outro": "\u0648\u062a\u0648\u0641\u0651\u0649 \u0627\u0644\u062d\u0643\u0627\u064a\u0629. "
-                 "\u0643\u0627\u0646 \u0645\u0639\u0627\u0643\u0645 \u0628\u0648\u0632\u064a\u062f "
-                 "\u0625\u0641 \u0625\u0645.",
-        "transition": "gentle magical chime transition sting, soft flute tail, "
-                      "instrumental", "transition_secs": 2.6,
+        "bed": (
+            "Mystical traditional storytelling music bed in A minor, 82 BPM. "
+            "Soft ney flute melody with gentle frame-drum and riq percussion, "
+            "warm low-string drones, and occasional soft chimes. Dreamy and "
+            "warm, immersive. Arrangement: flute solo (8 bars) -> percussion "
+            "enters (8 bars) -> full texture (8 bars) -> return to flute "
+            "solo (6 bars) -> fade. No vocals."
+        ),
+        "intro": "حكاية وحكاية، على بوزيد إف إم.",
+        "outro": "وتوفّى الحكاية. كان معاكم بوزيد إف إم.",
+        "transition": (
+            "gentle magical chime transition sting, soft flute note "
+            "and a delicate triangle ring, dreamy, instrumental"
+        ),
+        "transition_secs": 2.6,
+        "stings": [
+            "soft magical chime with a flute tail, mystical and warm, "
+            "instrumental",
+            "gentle frame-drum roll into a triangle hit, dreamy, "
+            "instrumental",
+            "delicate harp glissando with a soft wind chime, storytelling "
+            "vibe, instrumental",
+        ],
+        "sting_secs": 2.8,
     },
+    # -- 4. HERITAGE MUSIC --
     "heritagemusic": {
         "voice": "Gacrux",
-        "bed": "traditional Tunisian heritage music bed, malouf-inspired "
-               "strings and frame-drum percussion, elegant and timeless, no "
-               "vocals, instrumental",
-        "intro": "\u0645\u0648\u0633\u064a\u0642\u0649 \u0645\u0646 \u0627\u0644\u062a\u0631\u0627\u062b\u060c "
-                 "\u0639\u0644\u0649 \u0628\u0648\u0632\u064a\u062f \u0625\u0641 \u0625\u0645.",
-        "outro": "\u0643\u0627\u0646 \u0645\u0639\u0627\u0643\u0645 \u0631\u0643\u0646 "
-                 "\u0627\u0644\u062a\u0631\u0627\u062b \u0639\u0644\u0649 \u0628\u0648\u0632\u064a\u062f "
-                 "\u0625\u0641 \u0625\u0645.",
-        "transition": "elegant malouf string flourish transition sting, "
-                      "frame-drum hit, instrumental", "transition_secs": 2.6,
+        "bed": (
+            "Traditional Tunisian heritage music bed in D minor, 88 BPM. "
+            "Malouf-inspired string ensemble (violin, viola, cello) with "
+            "frame-drum (mizhar) and darbouka percussion, warm kanun "
+            "ornamentation. Elegant and timeless. Arrangement: kanun intro "
+            "(4 bars) -> string theme (8 bars) -> percussion joins (8 bars) -> "
+            "full ensemble (8 bars) -> resolution (4 bars). No vocals."
+        ),
+        "intro": "موسيقى من التراث، على بوزيد إف إم.",
+        "outro": "كان معاكم ركن التراث على بوزيد إف إم.",
+        "transition": (
+            "elegant malouf string flourish transition sting, "
+            "frame-drum hit and a kanun ornament, instrumental"
+        ),
+        "transition_secs": 2.6,
+        "stings": [
+            "traditional malouf string flourish with frame-drum hit, "
+            "elegant, instrumental",
+            "kanun glissando with soft darbouka tap, heritage style, "
+            "instrumental",
+            "violin swell into a mizhar percussion hit, dignified, "
+            "instrumental",
+        ],
+        "sting_secs": 2.8,
     },
+    # -- 5. SPORT --
     "sport": {
         "voice": "Puck",
-        "bed": "energetic sports radio music bed, boom-bap drums and brass "
-               "stabs, hype and driving, no vocals, instrumental",
-        "intro": "\u0631\u064a\u0627\u0636\u0629 \u0628\u0648\u0632\u064a\u062f\u060c "
-                 "\u0639\u0644\u0649 \u0628\u0648\u0632\u064a\u062f \u0625\u0641 \u0625\u0645. "
-                 "\u0622\u062e\u0631 \u0623\u062e\u0628\u0627\u0631 \u0627\u0644\u0631\u064a\u0627\u0636\u0629.",
-        "outro": "\u0643\u0627\u0646 \u0645\u0639\u0627\u0643\u0645 \u0631\u0643\u0646 "
-                 "\u0627\u0644\u0631\u064a\u0627\u0636\u0629 \u0639\u0644\u0649 \u0628\u0648\u0632\u064a\u062f "
-                 "\u0625\u0641 \u0625\u0645.",
-        "transition": "punchy sports hit transition sting, brass stab and drum, "
-                      "energetic, instrumental", "transition_secs": 2.4,
+        "bed": (
+            "Energetic sports radio music bed in E-flat minor, 110 BPM. "
+            "Boom-bap kick and snare, punchy brass stabs, driving synth bass, "
+            "and hype vocal chops (wordless). High energy throughout. "
+            "Arrangement: intro with riser (4 bars) -> beat drops (8 bars) -> "
+            "brass section (8 bars) -> breakdown (4 bars) -> final drop "
+            "(8 bars) -> cut. No lyrical vocals."
+        ),
+        "intro": "رياضة بوزيد، على بوزيد إف إم. آخر أخبار الرياضة.",
+        "outro": "كان معاكم ركن الرياضة على بوزيد إف إم.",
+        "transition": (
+            "punchy sports hit transition sting, brass stab, drum hit, "
+            "and a sub-boom, energetic, instrumental"
+        ),
+        "transition_secs": 2.4,
+        "stings": [
+            "punchy brass stab with a kick drum hit, energetic and bold, "
+            "instrumental",
+            "short hype riser into a snare hit, sports bumper style, "
+            "instrumental",
+            "aggressive synth buzz into a crash cymbal, driving, "
+            "instrumental",
+        ],
+        "sting_secs": 2.6,
+    },
+    # -- 6. NEWS --
+    "news": {
+        "voice": "Kore",
+        "bed": (
+            "Authoritative news radio music bed in C major, 85 BPM. "
+            "Clear, confident piano melody with soft sustained strings, "
+            "a steady kick-snare pulse, and subtle tympani accents. Clean "
+            "and professional. Arrangement: piano intro (4 bars) -> strings "
+            "enter (8 bars) -> full rhythm section (8 bars) -> return to "
+            "piano (8 bars) -> resolve (4 bars). No vocals."
+        ),
+        "intro": "نشرة الأخبار، على بوزيد إف إم. أحداث الساعة من سيدي بوزيد والجهة.",
+        "outro": "كانت معكم نشرة الأخبار على بوزيد إف إم. إلى اللقاء.",
+        "transition": (
+            "clean news transition sting, soft tympani and a swift "
+            "string glissando, authoritative, instrumental"
+        ),
+        "transition_secs": 2.4,
+        "stings": [
+            "confident piano and string stab, news bulletin style, "
+            "instrumental",
+            "short tympani hit with a brass swell, authoritative, "
+            "instrumental",
+            "clean glockenspiel chime with soft percussion, "
+            "professional, instrumental",
+        ],
+        "sting_secs": 2.6,
+    },
+    # -- 7. RAMADAN --
+    "ramadan": {
+        "voice": "Rhea",
+        "bed": (
+            "Spiritual, warm Ramadan music bed in D minor, 80 BPM. "
+            "Soulful ney flute melody over soft pad strings, gentle "
+            "darbouka and frame-drum percussion, warm bass drone. "
+            "Peaceful and contemplative. Arrangement: ney intro (8 bars) -> "
+            "percussion enters (8 bars) -> full texture (8 bars) -> ney "
+            "variation (8 bars) -> fade (4 bars). No vocals."
+        ),
+        "intro": "رفيق رمضان، على بوزيد إف إم. حلقات دينية وإيمانية في شهر الخير.",
+        "outro": "كان معكم برنامج رفيق رمضان على بوزيد إف إم. تقبل الله منا ومنكم.",
+        "transition": (
+            "gentle Ramadan transition sting, soft ney note with "
+            "a warm darbouka tap, spiritual, instrumental"
+        ),
+        "transition_secs": 2.8,
+        "stings": [
+            "warm ney flute note with soft frame-drum hit, spiritual "
+            "atmosphere, instrumental",
+            "gentle string swell with a darbouka accent, warm and "
+            "reverent, instrumental",
+            "soft chime with pad tail, peaceful Ramadan vibe, "
+            "instrumental",
+        ],
+        "sting_secs": 3.0,
+    },
+    # -- 8. FARMER --
+    "farmer": {
+        "voice": "Thuban",
+        "bed": (
+            "Pastoral, earthy farming music bed in G major, 92 BPM. "
+            "Acoustic guitar fingerpicking, mandolin counter-melody, "
+            "light shaker and brushed snare, warm harmonica pads. "
+            "Grounding and optimistic. Arrangement: guitar solo (8 bars) -> "
+            "mandolin enters (8 bars) -> rhythm section (8 bars) -> "
+            "return to guitar (8 bars) -> fade (4 bars). No vocals."
+        ),
+        "intro": "نشرة الفلاحة، على بوزيد إف إم. آخر المستجدات الفلاحية ونصائح الموسم.",
+        "outro": "كانت معكم نشرة الفلاحة على بوزيد إف إم. والسلام.",
+        "transition": (
+            "short rustic transition sting, acoustic guitar strum "
+            "with a soft mandolin note, pastoral, instrumental"
+        ),
+        "transition_secs": 2.4,
+        "stings": [
+            "acoustic guitar and mandolin flourish, rustic and warm, "
+            "instrumental",
+            "light harmonica note with a shaker hit, countryside feel, "
+            "instrumental",
+            "gentle wood block tap with guitar chime, natural, "
+            "instrumental",
+        ],
+        "sting_secs": 2.6,
+    },
+    # -- 9. HEALTH --
+    "health": {
+        "voice": "Sulafat",
+        "bed": (
+            "Calm, caring health advice music bed in C major, 86 BPM. "
+            "Warm piano arpeggios with soft string pad, gentle kick-snare "
+            "pulse, delicate chimes. Soothing and reassuring. Arrangement: "
+            "piano solo (8 bars) -> strings enter (8 bars) -> light "
+            "percussion (8 bars) -> return to piano (8 bars) -> fade (4 bars)."
+            " No vocals."
+        ),
+        "intro": "نصيحة صحية، على بوزيد إف إم. صحتك تهمنا.",
+        "outro": "كان معكم ركن نصيحة صحية على بوزيد إف إم. في أمان الله.",
+        "transition": (
+            "soft, gentle health transition sting, piano note with "
+            "a warm string swell, caring, instrumental"
+        ),
+        "transition_secs": 2.6,
+        "stings": [
+            "warm piano chord with soft chime, reassuring and calm, "
+            "instrumental",
+            "gentle string swell with a delicate bell tone, peaceful, "
+            "instrumental",
+            "soft harp glissando with pad tail, soothing, instrumental",
+        ],
+        "sting_secs": 2.8,
+    },
+    # -- 10. FAMILY --
+    "family": {
+        "voice": "Aoede",
+        "bed": (
+            "Heartwarming family radio bed in F major, 94 BPM. "
+            "Warm acoustic guitar strumming, soft piano, light shaker "
+            "and cajon percussion, cheerful whistled melody. Welcoming "
+            "and cosy. Arrangement: guitar intro (4 bars) -> whistled "
+            "theme (8 bars) -> full band (8 bars) -> piano variation "
+            "(8 bars) -> guitar outro (4 bars). No vocals."
+        ),
+        "intro": "ركن الأسرة، على بوزيد إف إم. نصائح وارشادات للأسرة التونسية.",
+        "outro": "كان معكم ركن الأسرة على بوزيد إف إم. إلى اللقاء.",
+        "transition": (
+            "warm family transition sting, bright acoustic guitar "
+            "strum and a soft clap, heartwarming, instrumental"
+        ),
+        "transition_secs": 2.4,
+        "stings": [
+            "acoustic guitar strum with a cheerful clap, warm and "
+            "inviting, instrumental",
+            "soft piano note with a light shaker, family-friendly, "
+            "instrumental",
+            "bright whistled phrase with gentle percussion, cosy, "
+            "instrumental",
+        ],
+        "sting_secs": 2.6,
+    },
+    # -- 11. HOROSCOPE --
+    "horoscope": {
+        "voice": "Mimosa",
+        "bed": (
+            "Mysterious, ethereal horoscope music bed in B-flat minor, 78 BPM. "
+            "Dreamy synth pads, glockenspiel melody, soft electronic "
+            "percussion, occasional sparkle effects. Celestial and intriguing. "
+            "Arrangement: pad intro (4 bars) -> glockenspiel theme (8 bars) -> "
+            "beat enters (8 bars) -> filtered breakdown (8 bars) -> "
+            "resolution (4 bars). No vocals."
+        ),
+        "intro": "برج اليوم، على بوزيد إف إم. توقعات الأبراج ليومك.",
+        "outro": "كان معكم برج اليوم على بوزيد إف إم. ونراكم غداً.",
+        "transition": (
+            "mystical horoscope transition sting, celeste chime with "
+            "a soft synth riser, ethereal, instrumental"
+        ),
+        "transition_secs": 2.6,
+        "stings": [
+            "glockenspiel and synth chime, mysterious and ethereal, "
+            "instrumental",
+            "soft sparkle effect with a pad swell, celestial, "
+            "instrumental",
+            "gentle bell tone with a filtered riser, horoscope vibe, "
+            "instrumental",
+        ],
+        "sting_secs": 2.8,
+    },
+    # -- 12. QUIZ --
+    "quiz": {
+        "voice": "Alnasl",
+        "bed": (
+            "Playful, bright quiz show music bed in D major, 104 BPM. "
+            "Pizzicato strings, bright xylophone, light funk guitar chops, "
+            "tight kick-snare with handclaps. Energetic and fun. "
+            "Arrangement: pizzicato intro (4 bars) -> theme (8 bars) -> "
+            "funk section (8 bars) -> pause-drop (4 bars) -> theme out "
+            "(8 bars). No vocals."
+        ),
+        "intro": "سؤال اليوم، على بوزيد إف إم. شاركونا الإجابة.",
+        "outro": "كان معكم سؤال اليوم على بوزيد إف إم. إلى المزيد من الأسئلة.",
+        "transition": (
+            "bright quiz transition sting, pizzicato string flourish "
+            "with a handclap, playful, instrumental"
+        ),
+        "transition_secs": 2.4,
+        "stings": [
+            "xylophone and pizzicato string hit, bright and playful, "
+            "instrumental",
+            "short funk guitar chop with a handclap, energetic quiz "
+            "vibe, instrumental",
+            "rising synth with a clap and a bell, game show style, "
+            "instrumental",
+        ],
+        "sting_secs": 2.4,
+    },
+    # -- 13. DID YOU KNOW? --
+    "didyouknow": {
+        "voice": "Procyon",
+        "bed": (
+            "Curious, light educational music bed in G major, 88 BPM. "
+            "Bouncy marimba melody, soft pizzicato strings, light kick "
+            "and hi-hat, occasional triangle accents. Inquisitive and "
+            "warm. Arrangement: marimba intro (4 bars) -> strings enter "
+            "(8 bars) -> percussion (8 bars) -> variation (8 bars) -> "
+            "marimba outro (4 bars). No vocals."
+        ),
+        "intro": "هل تعلم؟ على بوزيد إف إم. معلومة جديدة كل يوم.",
+        "outro": "كان معكم ركن هل تعلم على بوزيد إف إم. إلى اللقاء.",
+        "transition": (
+            "curious did-you-know transition sting, marimba note with "
+            "a triangle ring, light and inquisitive, instrumental"
+        ),
+        "transition_secs": 2.4,
+        "stings": [
+            "bright marimba run with a soft triangle hit, curious "
+            "and light, instrumental",
+            "pizzicato string pluck with a shaker, educational vibe, "
+            "instrumental",
+            "short wood block and bell chime, playful and inquisitive, "
+            "instrumental",
+        ],
+        "sting_secs": 2.6,
+    },
+    # -- 14. SONG STORY --
+    "songstory": {
+        "voice": "Gacrux",
+        "bed": (
+            "Narrative, warm music documentary bed in A minor, 84 BPM. "
+            "Solo piano intro with warm string counterpoint, soft kick "
+            "and brushed snare, warm bass. Storytelling and emotional. "
+            "Arrangement: piano solo (8 bars) -> strings enter (8 bars) -> "
+            "full band (8 bars) -> piano variation (8 bars) -> fade (4 bars)."
+            " No vocals."
+        ),
+        "intro": "الأغنية وقصتها، على بوزيد إف إم. حكاية كل أغنية.",
+        "outro": "كان معكم برنامج الأغنية وقصتها على بوزيد إف إم. مع السلامة.",
+        "transition": (
+            "warm narrative transition sting, soft piano note with "
+            "a string swell, musical storytelling, instrumental"
+        ),
+        "transition_secs": 2.8,
+        "stings": [
+            "gentle piano chord with a string tail, warm and narrative, "
+            "instrumental",
+            "soft brushed drum roll into a piano note, musical story "
+            "vibe, instrumental",
+            "warm bass note with a delicate chime, reflective, "
+            "instrumental",
+        ],
+        "sting_secs": 2.8,
+    },
+    # -- 15. WORD --
+    "word": {
+        "voice": "Castor",
+        "bed": (
+            "Scholarly, thoughtful word-origin bed in C minor, 80 BPM. "
+            "Warm oud and ney flute dialogue, soft frame-drum, low "
+            "string drone. Contemplative and learned. Arrangement: oud "
+            "solo (8 bars) -> ney enters (8 bars) -> percussion (8 bars) -> "
+            "oud and ney duet (8 bars) -> fade (4 bars). No vocals."
+        ),
+        "intro": "كلمة وأصلها، على بوزيد إف إم. رحلة في اللغة العربية.",
+        "outro": "كان معكم ركن كلمة وأصلها على بوزيد إف إم. إلى اللقاء.",
+        "transition": (
+            "thoughtful word transition sting, soft oud pluck with "
+            "a ney breath, scholarly, instrumental"
+        ),
+        "transition_secs": 2.6,
+        "stings": [
+            "warm oud strum with soft frame-drum tap, thoughtful "
+            "atmosphere, instrumental",
+            "ney flute note with a low string drone, reflective, "
+            "instrumental",
+            "soft darbouka tap with a kanun ornament, learned vibe, "
+            "instrumental",
+        ],
+        "sting_secs": 2.8,
+    },
+    # -- 16. FIGURES --
+    "figures": {
+        "voice": "Electra",
+        "bed": (
+            "Historical documentary music bed in D minor, 76 BPM. "
+            "Cinematic string orchestra, warm brass chorale, timpani "
+            "accents, soft piano. Dignified and inspiring. Arrangement: "
+            "string intro (4 bars) -> brass enters (8 bars) -> full "
+            "orchestra (8 bars) -> chamber section (8 bars) -> finale "
+            "(4 bars). No vocals."
+        ),
+        "intro": "أعلام من الجهة، على بوزيد إف إم. شخصيات صنعت تاريخ سيدي بوزيد.",
+        "outro": "كان معكم ركن أعلام من الجهة على بوزيد إف إم. والسلام.",
+        "transition": (
+            "epic historical transition sting, brass swell with a "
+            "timpani hit, dignified, instrumental"
+        ),
+        "transition_secs": 2.8,
+        "stings": [
+            "cinematic brass and timpani stab, historical documentary "
+            "style, instrumental",
+            "warm string and french horn swell, inspiring, "
+            "instrumental",
+            "soft piano chord with orchestral hit, dignified, "
+            "instrumental",
+        ],
+        "sting_secs": 3.0,
+    },
+    # -- 17. HOME --
+    "home": {
+        "voice": "Rhea",
+        "bed": (
+            "Practical, cosy home advice bed in C major, 92 BPM. "
+            "Bright acoustic guitar, soft ukulele strum, light kick "
+            "and tambourine, warm bass. Friendly and helpful. "
+            "Arrangement: guitar intro (4 bars) -> ukulele theme (8 bars) -> "
+            "full band (8 bars) -> guitar variation (8 bars) -> strum "
+            "outro (4 bars). No vocals."
+        ),
+        "intro": "نصيحة البيت، على بوزيد إف إم. نصائح عملية للمنزل.",
+        "outro": "كان معكم ركن نصيحة البيت على بوزيد إف إم. في أمان الله.",
+        "transition": (
+            "cosy home transition sting, ukulele strum with a soft "
+            "tambourine shake, friendly, instrumental"
+        ),
+        "transition_secs": 2.4,
+        "stings": [
+            "bright ukulele strum with a tambourine hit, cosy and "
+            "friendly, instrumental",
+            "soft acoustic guitar note with a wood block tap, "
+            "practical vibe, instrumental",
+            "warm bass note with a light shaker, homely, instrumental",
+        ],
+        "sting_secs": 2.6,
+    },
+    # -- 18. PRAYER --
+    "prayer": {
+        "voice": "Rhea",
+        "bed": (
+            "Reverent, peaceful prayer music bed in D minor, 70 BPM. "
+            "Solo ney flute over soft synth pads and a warm bass drone, "
+            "distant frame-drum accents. Spiritual and calm. "
+            "Arrangement: ney alone (8 bars) -> pads enter (8 bars) -> "
+            "percussion lightly enters (8 bars) -> return to ney (8 bars) -> "
+            "silence (4 bars). No vocals."
+        ),
+        "intro": "مواقيت الصلاة، على بوزيد إف إم. تذكير بأوقات الصلاة.",
+        "outro": "كان معكم مواقيت الصلاة على بوزيد إف إم. في رعاية الله.",
+        "transition": (
+            "peaceful prayer transition sting, soft ney note with a "
+            "reverent pad swell, spiritual, instrumental"
+        ),
+        "transition_secs": 3.0,
+        "stings": [
+            "soft ney flute note with gentle pad tail, reverent, "
+            "instrumental",
+            "warm bass drone with a distant chime, peaceful, "
+            "instrumental",
+            "gentle frame-drum tap with pad atmosphere, spiritual, "
+            "instrumental",
+        ],
+        "sting_secs": 3.0,
+    },
+    # -- 19. EVENTS --
+    "events": {
+        "voice": "Risha",
+        "bed": (
+            "Bright, informative events calendar bed in C major, 96 BPM. "
+            "Steady acoustic guitar strum, light piano chords, crisp kick "
+            "and hi-hat, cheerful brass hits. Upbeat and clear. "
+            "Arrangement: guitar intro (4 bars) -> piano theme (8 bars) -> "
+            "brass accents (8 bars) -> breakdown (8 bars) -> theme out "
+            "(4 bars). No vocals."
+        ),
+        "intro": "روزنامة الجهة، على بوزيد إف إم. أحداث وفعاليات سيدي بوزيد.",
+        "outro": "كانت معكم روزنامة الجهة على بوزيد إف إم. إلى اللقاء.",
+        "transition": (
+            "bright events transition sting, piano and brass hit "
+            "with a crisp snare, informative, instrumental"
+        ),
+        "transition_secs": 2.4,
+        "stings": [
+            "bright brass and piano stab, informative and clear, "
+            "instrumental",
+            "acoustic guitar strum with a cheerful brass note, "
+            "upbeat events vibe, instrumental",
+            "crisp snare hit with a glockenspiel chime, lively, "
+            "instrumental",
+        ],
+        "sting_secs": 2.6,
+    },
+    # -- 20. PROVERB --
+    "proverb": {
+        "voice": "Electra",
+        "bed": (
+            "Wise, thoughtful proverb music bed in E minor, 78 BPM. "
+            "Soulful oud solo with soft string pad, gentle darbouka "
+            "accents, warm bass. Reflective and grounded. Arrangement: "
+            "oud intro (8 bars) -> strings enter (8 bars) -> percussion "
+            "lightly (8 bars) -> oud variation (8 bars) -> fade (4 bars)."
+            " No vocals."
+        ),
+        "intro": "مثل اليوم، على بوزيد إف إم. حكمة من التراث التونسي.",
+        "outro": "كان معكم ركن مثل اليوم على بوزيد إف إم. مع السلامة.",
+        "transition": (
+            "wise proverb transition sting, warm oud note with "
+            "a gentle string swell, thoughtful, instrumental"
+        ),
+        "transition_secs": 2.8,
+        "stings": [
+            "warm oud strum with a soft string pad, wise and "
+            "thoughtful, instrumental",
+            "gentle darbouka tap with a bass note, grounded, "
+            "instrumental",
+            "soft pad swell with a delicate chime, reflective "
+            "proverb vibe, instrumental",
+        ],
+        "sting_secs": 2.8,
+    },
+    # -- 21. BUDGET --
+    "budget": {
+        "voice": "Thuban",
+        "bed": (
+            "Friendly, practical budget cooking bed in C major, 94 BPM. "
+            "Acoustic guitar strumming, soft accordion melody, light "
+            "tambourine and kick, warm upright bass. Economical and "
+            "cheerful. Arrangement: guitar intro (4 bars) -> accordion "
+            "theme (8 bars) -> full band (8 bars) -> guitar variation "
+            "(8 bars) -> strum outro (4 bars). No vocals."
+        ),
+        "intro": "وصفة اقتصادية، على بوزيد إف إم. طبخ بنين وبأسعار معقولة.",
+        "outro": "كان معكم ركن وصفة اقتصادية على بوزيد إف إم. بالصحة والهنا.",
+        "transition": (
+            "friendly budget transition sting, accordion note with "
+            "a soft guitar strum, warm and practical, instrumental"
+        ),
+        "transition_secs": 2.4,
+        "stings": [
+            "bright accordion chord with acoustic guitar strum, "
+            "friendly and warm, instrumental",
+            "soft tambourine shake with a bass note, practical "
+            "kitchen vibe, instrumental",
+            "gentle wood block with a guitar chime, economical "
+            "and cheerful, instrumental",
+        ],
+        "sting_secs": 2.6,
     },
 }
 
