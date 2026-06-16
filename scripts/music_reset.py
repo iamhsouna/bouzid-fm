@@ -79,7 +79,22 @@ def music_root():
 
 
 def crate_folders():
-    """Music-pool folder names, read from the schedule config (single source)."""
+    """Music-pool folder names — auto-derived from non-empty folders on disk.
+
+    The single source of truth is now a runtime scan of MUSIC_DIR (via
+    azuracast.discover_music_crates): any folder holding >=1 audio file is a
+    crate. This keeps orphan-detection honest — delete the last file from a
+    folder and a subsequent `music-reset` will purge that folder's stale
+    remote tracks too. Falls back to the schedule_config folder list only if
+    the disk scan returns nothing (e.g. MUSIC_DIR not mounted locally).
+    """
+    try:
+        found = azuracast.discover_music_crates(music_root())
+        if found:
+            return {f.lower() for f in found}
+    except Exception:  # noqa: BLE001
+        pass
+    # Fallback: the full configured crate set from schedule_config.py.
     path = os.path.join(ROOT, "config", "schedule_config.py")
     try:
         spec = importlib.util.spec_from_file_location("schedule_config", path)

@@ -1,45 +1,45 @@
 {
-  "_comment": "Music source for Bouzid FM. Each crate = a music folder used by the weekly schedule (folder name MUST match the crate keys in config/schedule_config.py). 'default' is a researched Anghami playlist; 'override' wins when set (edit it from the Music tab). Tracks are pulled from the Anghami playlist's tracklist and downloaded as MP3 via yt-dlp YouTube search. Public Anghami playlists need no login.",
+  "_comment": "Music sources for Bouzid FM. FOLDER-DERIVED model: each key below is a music folder name (and MUST match a folder/label in config/schedule_config.py). Crates are AUTO-DISCOVERED at runtime — the weekly scheduler only activates dayparts whose folder actually contains audio on disk (see azuracast.discover_music_crates). So this file no longer gates what's on air; it only feeds `bouzid fetch` / the Music tab when you want to (re)download a folder. 'default' is a researched Anghami playlist URL; 'override' wins when set (edit from the Music tab). To add a brand-new crate: create the folder under MUSIC_DIR, drop audio in, then (optionally) add the folder key here with a source URL. Tracks download as MP3 via yt-dlp YouTube search of the Anghami tracklist. Public Anghami playlists need no login.",
   "quality": "128",
   "crates": {
     "morning": {
       "label": "Morning - calm Arabic chill",
-      "default": "https://play.anghami.com/playlist/243166794",
+      "default": "",
       "override": ""
     },
     "daytime": {
       "label": "Daytime - Top in Tunisia mix",
-      "default": "https://play.anghami.com/playlist/61205610",
+      "default": "",
       "override": ""
     },
     "afternoon": {
       "label": "Afternoon - Tunisian (shaabi/malouf)",
-      "default": "https://play.anghami.com/playlist/126934417",
+      "default": "",
       "override": ""
     },
     "evening": {
       "label": "Evening - Tarab Khaleeji",
-      "default": "https://play.anghami.com/playlist/10885965",
+      "default": "",
       "override": ""
     },
     "night": {
       "label": "Night - Tarab Aseel (best of)",
-      "default": "https://play.anghami.com/playlist/199770463",
+      "default": "",
       "override": ""
     },
     "overnight": {
       "label": "Overnight - Arabic chill & lounge",
-      "default": "https://play.anghami.com/playlist/277956603",
+      "default": "",
       "override": ""
     },
     "friday": {
       "label": "Friday - classic Tarab / Malouf",
-      "default": "https://play.anghami.com/playlist/246543101",
+      "default": "",
       "override": ""
     },
     "weekend": {
       "label": "Weekend - Arabic party & dance",
-      "default": "https://play.anghami.com/playlist/32195317",
+      "default": "",
       "override": ""
     }
   }

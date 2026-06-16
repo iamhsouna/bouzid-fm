@@ -58,6 +58,9 @@ Content
   music-reset [--dry-run]  Make AzuraCast match your local music: remove tracks
                         you deleted locally, re-import, reschedule (--dry-run
                         only lists what would be removed)
+  flush [--dry-run]     Wipe ALL AzuraCast media + 'Bouzid ' playlists (clean
+                        slate). --dry-run lists what would go. Rebuild after
+                        with: bouzid rescan
   sync [show]           Two-way sync a library (or all) with AzuraCast
   reset-assets          Wipe assets/ & rebuild the clean structure, then rescan
 
@@ -198,6 +201,9 @@ case "$cmd" in
   music-reset|reset-music)
     ensure_api
     python3 scripts/music_reset.py "$@";;
+  flush|wipe)
+    ensure_api
+    python3 scripts/azuracast.py flush "$@";;
   tui)
     PY="python3"; [ -x "$ROOT/.venv/bin/python" ] && PY="$ROOT/.venv/bin/python"
     exec "$PY" scripts/bouzid_tui.py;;

@@ -54,6 +54,55 @@ def _hhmm(s):
     return 2359 if v >= 2400 else v
 
 
+# Audio extensions recognised everywhere (matches AzuraCast.AUDIO_EXTS).
+_AUDIO_EXTS = (".mp3", ".m4a", ".aac", ".ogg", ".oga", ".opus",
+               ".flac", ".wav", ".wma")
+
+
+def _music_dir():
+    """Resolve the local music library root (MUSIC_DIR env, else <repo>/music)."""
+    md = os.environ.get("MUSIC_DIR", os.path.join(ROOT, "music"))
+    md = os.path.expanduser(os.path.expandvars(md))
+    return md if os.path.isabs(md) else os.path.join(ROOT, md)
+
+
+def discover_music_crates(music_dir=None):
+    """Return sorted folder names under `music_dir` that hold >=1 audio file.
+
+    A folder is a "music crate" iff some file beneath it (recursively) has an
+    audio extension. The news/ and jingles/ asset folders are excluded because
+    they are scheduled as their own news/jingle playlists, not as music
+    rotation. show/asset folders (cook, sidibouzid, farmer, ...) are naturally
+    ignored: they're never referenced by schedule_config.PLAYLISTS, so even if
+    they contain audio they won't be promoted into a music daypart.
+
+    This is the single source of truth for "which folders have music right now"
+    — the weekly scheduler and music-reset both call it so empty dayparts are
+    auto-skipped and re-activate the moment you drop music into a folder.
+    """
+    if music_dir is None:
+        music_dir = _music_dir()
+    try:
+        cfg = _load_schedule_cfg()
+        excluded = {getattr(cfg, "NEWS_FOLDER", "news").lower(),
+                    getattr(cfg, "JINGLE_FOLDER", "jingles").lower()}
+    except Exception:  # noqa: BLE001
+        excluded = {"news", "jingles"}
+    crates = set()
+    if not os.path.isdir(music_dir):
+        return []
+    for entry in sorted(os.listdir(music_dir)):
+        full = os.path.join(music_dir, entry)
+        if not os.path.isdir(full) or entry.lower() in excluded:
+            continue
+        for _base, _dirs, names in os.walk(full):
+            if any(n.lower().endswith(_AUDIO_EXTS) and not n.startswith(".")
+                   for n in names):
+                crates.add(entry)
+                break
+    return sorted(crates)
+
+
 class AzuraCast:
     def __init__(self, url=None, api_key=None, station=None):
         self.url = (url or _env("AZURACAST_URL", "http://localhost")).rstrip("/")
@@ -436,6 +485,39 @@ class AzuraCast:
     def playlists_by_name(self):
         return {p.get("name"): p.get("id") for p in self.playlists()}
 
+    def delete_all_playlists(self, prefix="Bouzid "):
+        """Delete every playlist whose name starts with `prefix`.
+
+        Returns the number deleted. Leaves the stock `default` playlist and any
+        other non-prefixed playlists untouched. Used by `apply_schedule(reset)`
+        and `bouzid flush`.
+        """
+        n = 0
+        for nm, pid in list(self.playlists_by_name().items()):
+            if nm and nm.startswith(prefix):
+                self.delete_playlist(pid)
+                n += 1
+        return n
+
+    def delete_all_media(self):
+        """Delete every media file from the station library.
+
+        There is no bulk-delete API, so this loops `files()` + `delete_file()`.
+        Returns the number deleted. Used by `bouzid flush` for a clean slate.
+        """
+        files = self.files()
+        n = 0
+        for f in files:
+            fid = f.get("id")
+            if fid is None:
+                continue
+            try:
+                self.delete_file(fid)
+                n += 1
+            except RuntimeError:
+                pass  # keep going on per-file failures
+        return n
+
     # ---- weekly scheduler (builds the Bouzid FM weekly grid on AzuraCast) ----
     def build_schedule_plan(self):
         """Translate config/schedule_config.py into AzuraCast playlists.
@@ -464,11 +546,23 @@ class AzuraCast:
 
         plan = []
 
-        # 1) Music: group dayparts by the crate/playlist they use.
+        # Which folders actually have music on disk right now. Empty folders are
+        # auto-skipped: their daypart playlist isn't created, so that time
+        # window falls through to the 24/7 fallback (which plays whatever IS
+        # available). Drop music into a folder + run `bouzid rescan` and the
+        # daypart re-activates on the next schedule apply. No hand-maintained
+        # crate list — it's derived from MUSIC_DIR at runtime.
+        live_crates = set(discover_music_crates())
+
+        # 1) Music: group dayparts by the crate/playlist they use, but only for
+        #    playlists whose folder is non-empty on disk.
         music_groups = {}
         for dp, info in cfg.DAYPARTS.items():
             if dp in windows:
-                music_groups.setdefault(info["playlist"], []).append(dp)
+                folder = (cfg.PLAYLISTS.get(info["playlist"], {})
+                          .get("folder", "")).lower()
+                if folder in live_crates:
+                    music_groups.setdefault(info["playlist"], []).append(dp)
         for pl, dps in music_groups.items():
             folder = cfg.PLAYLISTS[pl]["folder"]
             name = prefix + cfg.PLAYLISTS[pl]["label"]
@@ -485,9 +579,10 @@ class AzuraCast:
         #     playable media right now. It guarantees the station is NEVER
         #     offline — e.g. if a daypart folder hasn't been filled yet, or in
         #     any gap between windows. Scheduled playlists still take priority
-        #     during their time slots. It pulls from every music folder.
-        all_music_folders = sorted({cfg.PLAYLISTS[pl]["folder"]
-                                    for pl in music_groups})
+        #     during their time slots. It pulls from every non-empty music
+        #     folder (derived from disk, so it survives even if every daypart
+        #     is empty — it'll just play whatever has music).
+        all_music_folders = sorted(live_crates)
         if all_music_folders:
             fb_name = prefix + "24/7 (All Music)"
             plan.append((fb_name, {
@@ -566,10 +661,8 @@ class AzuraCast:
             return {"planned": len(plan), "dry_run": True}
 
         if reset:
-            for nm, pid in list(self.playlists_by_name().items()):
-                if nm and nm.startswith("Bouzid "):
-                    self.delete_playlist(pid)
-                    print("  deleted old playlist:", nm)
+            n = self.delete_all_playlists()
+            print("  deleted %d old 'Bouzid ' playlist(s)" % n)
 
         for name, payload, _folders in plan:
             self._req("POST", "/api/station/%s/playlists" % self.station,
@@ -771,6 +864,14 @@ def main():
                     help="delete existing 'Bouzid ' playlists first")
     sc.add_argument("--no-assign", action="store_true",
                     help="do not (re)assign media files to playlists")
+    fl = sub.add_parser("flush",
+                        help="wipe all media + 'Bouzid ' playlists (clean slate)")
+    fl.add_argument("--dry-run", action="store_true",
+                    help="show what would be deleted, change nothing")
+    fl.add_argument("--media-only", action="store_true",
+                    help="only delete media files, keep playlists")
+    fl.add_argument("--playlists-only", action="store_true",
+                    help="only delete 'Bouzid ' playlists, keep media")
     args = ap.parse_args()
 
     ac = AzuraCast()
@@ -817,6 +918,37 @@ def main():
         elif args.cmd == "apply-schedule":
             ac.apply_schedule(dry_run=args.dry_run, reset=args.reset,
                               assign=not args.no_assign)
+        elif args.cmd == "flush":
+            do_media = not args.playlists_only
+            do_playlists = not args.media_only
+            if args.dry_run:
+                if do_media:
+                    from collections import Counter
+                    fs = ac.files()
+                    folders = Counter()
+                    for f in fs:
+                        p = (f.get("path") or "")
+                        top = p.split("/")[0] if "/" in p else "(root)"
+                        folders[top] += 1
+                    print("MEDIA that would be deleted: %d file(s)" % len(fs))
+                    for folder, n in sorted(folders.items()):
+                        print("  %-20s %d" % (folder, n))
+                if do_playlists:
+                    pls = [p.get("name") for p in ac.playlists()
+                           if (p.get("name") or "").startswith("Bouzid ")]
+                    print("\nPLAYLISTS that would be deleted: %d" % len(pls))
+                    for nm in pls:
+                        print("  -", nm)
+                print("\n(dry-run — nothing was deleted)")
+            else:
+                md = pl = 0
+                if do_playlists:
+                    md = ac.delete_all_playlists()
+                    print("Deleted %d 'Bouzid ' playlist(s)." % md)
+                if do_media:
+                    pl = ac.delete_all_media()
+                    print("Deleted %d media file(s)." % pl)
+                print("Flush complete. Rebuild with: bouzid rescan")
     except RuntimeError as e:
         sys.exit(str(e))
 

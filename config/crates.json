@@ -1,71 +1,39 @@
 {
-  "_comment": "Each crate maps to a music folder used by the weekly schedule. queries use yt-dlp ytsearch; playlists are explicit YouTube/YouTube Music URLs. Tune freely.",
+  "_comment": "Optional yt-dlp search sources per music folder (FOLDER-DERIVED model). NOTE: crates are AUTO-DISCOVERED at runtime from non-empty folders under MUSIC_DIR (see azuracast.discover_music_crates) — this file does NOT decide what's on air. It is only read by scripts/fetch_trending.py for optional yt-dlp ytsearch queries, which is currently dormant. To source a folder via YouTube search instead of an Anghami playlist, add queries here and run fetch_trending.py for that crate. Folder keys MUST match config/schedule_config.py.",
   "max_per_source": 15,
   "max_duration_sec": 600,
   "geo_country": "TN",
   "crates": {
-    "daytime": {
-      "queries": [
-        "trending tunisian songs this week",
-        "أغاني تونسية رائجة 2026",
-        "tunisia top songs",
-        "تونس الأكثر استماعا"
-      ],
+    "morning": {
+      "queries": [],
       "playlists": []
     },
-    "morning": {
-      "queries": [
-        "أغاني صباحية هادئة تونس",
-        "calm arabic morning music",
-        "tunisian acoustic chill"
-      ],
+    "daytime": {
+      "queries": [],
       "playlists": []
     },
     "afternoon": {
-      "queries": [
-        "مالوف تونسي",
-        "شعبي تونسي",
-        "مزود تونسي"
-      ],
+      "queries": [],
       "playlists": []
     },
     "evening": {
-      "queries": [
-        "طرب عربي أصيل",
-        "أغاني خليجية رائجة",
-        "tarab classics"
-      ],
+      "queries": [],
       "playlists": []
     },
     "night": {
-      "queries": [
-        "أجمل الأغاني التونسية",
-        "best tunisian music",
-        "tunisian hits playlist"
-      ],
+      "queries": [],
       "playlists": []
     },
     "overnight": {
-      "queries": [
-        "arabic lofi chill",
-        "ambient instrumental relax",
-        "late night chill mix"
-      ],
+      "queries": [],
       "playlists": []
     },
     "friday": {
-      "queries": [
-        "مالوف تونسي كلاسيك",
-        "طرب تونسي قديم"
-      ],
+      "queries": [],
       "playlists": []
     },
     "weekend": {
-      "queries": [
-        "tunisian party mix",
-        "أغاني حفلات تونسية",
-        "mezoued party"
-      ],
+      "queries": [],
       "playlists": []
     }
   }
