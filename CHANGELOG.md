@@ -3,6 +3,18 @@
 All notable changes to the 2.0 line. This is a clean rewrite of Bouzid FM:
 Google-only, TUI-first, with the real mastered station imaging.
 
+## 1.2.3 (2026-06-16)
+
+- **Updating is now just `git pull` — you do NOT need to re-run `install.sh`.**
+  Two installer fixes stop git from fighting you on every update:
+  (1) the installer now sets `git config core.fileMode false` in your checkout,
+  so the executable bit it puts on the `bouzid` launcher is no longer seen by
+  git as a "local change" that blocks the next pull; and (2) it no longer marks
+  the Python scripts executable at all — they are always run via `python3`, so
+  there was never a reason to, and doing it was the actual cause of pulls
+  aborting with "your local changes would be overwritten" on files you never
+  touched. Only the `bouzid` launcher keeps its exec bit now.
+
 ## 1.2.2 (2026-06-16)
 
 - **Music fetch no longer skips most of a playlist.** The fetcher used a
@@ -220,25 +232,12 @@ keeping every feature except the jingle builder.
   Every other provider (NVIDIA, OpenRouter, ElevenLabs, XTTS, edge-tts) and all
   of their settings, fields and Docker services are gone.
 - **TUI-first.** `bouzid tui` opens the control panel and that is the primary
-  way to run the station. The navigation was redesigned into a logical flow:
-  **Dashboard → News → Shows → Imaging → Music → Settings**, with a live
-  Activity log at the bottom and one-key tab switching (d / n / s / i / m / g).
+  way to run the station.
 - **Real mastered imaging.** Intros, outros, music beds and transition stings
   are the produced, loudness-matched audio files — the app no longer synthesizes
   beep tones. Each show has its own imaging under `assets/<show>/`.
 - **No jingle builder.** The synthesized-jingle feature was removed entirely
   (no `make_jingles.py`, no jingle assets, no rebuild button).
-
-### Carried over from 0.2.x
-- AI news bulletins (live Tunisian RSS → Gemini → voiced → mixed).
-- Breaking-news flash that writes and airs instantly.
-- “Cook with Eya” daily cooking show.
-- “Story of Sidi Bouzid” daily ~3-minute culture & history show.
-- Generic preset show engine with all bundled show presets.
-- AzuraCast upload + weekly scheduling.
-- n8n automated bulletin pipeline (single Google-TTS workflow).
-- Docker Compose stack (AzuraCast + n8n).
-- Trending Tunisian music fetcher and library rescan.
 
 ### Voice
 - Default voice: **Kore** (female). 30 Gemini voices available, grouped by

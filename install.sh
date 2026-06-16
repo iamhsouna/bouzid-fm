@@ -15,6 +15,8 @@
 #    curl -fsSL https://raw.githubusercontent.com/<you>/bouzid-fm/main/install.sh | bash
 #  or, from a clone:
 #    ./install.sh
+#
+#  Updating later: just `git pull` (you do NOT need to re-run this script).
 # =============================================================================
 set -euo pipefail
 
@@ -70,6 +72,11 @@ else
   git clone --branch "$BRANCH" "$REPO_URL" "$INSTALL_DIR"
 fi
 cd "$INSTALL_DIR"
+
+# Ignore file-mode (chmod +x) changes in this checkout so a later `git pull`
+# never aborts with "local changes would be overwritten" just because we mark
+# the launcher executable. It is a pure permission bit, not a content change.
+git config core.fileMode false 2>/dev/null || true
 
 # --- 4) Environment ---------------------------------------------------------
 if [ ! -f .env ]; then
@@ -144,7 +151,11 @@ python3 scripts/build_n8n.py || true
 
 # --- 5) Install the bouzid CLI ---------------------------------------------
 blue "Installing 'bouzid' CLI to /usr/local/bin ..."
-chmod +x bin/bouzid scripts/*.py install.sh
+# Only the launcher needs the exec bit. The Python scripts are always invoked
+# via `python3 <script>.py`, so we deliberately do NOT chmod them — doing so
+# would flip their git file-mode and make every later `git pull` complain about
+# "local changes" on files you never edited.
+chmod +x bin/bouzid install.sh
 sudo ln -sf "$INSTALL_DIR/bin/bouzid" /usr/local/bin/bouzid
 
 # --- 6) Launch the stack ----------------------------------------------------
@@ -239,6 +250,9 @@ Next steps:
   4. (Optional automation) open n8n at http://localhost:5678 and import
      n8n/bouzid-news-google-tts.json, set GEMINI_API_KEY there, and Activate it.
   5. Tune music sources any time in config/crates.json, then: bouzid fetch --bg
+
+Updating later:
+  • Just `git pull` in this folder — no need to re-run install.sh.
 
 Your music library: ${MUSIC_DIR}
   • It lives OUTSIDE this app folder, so it survives reinstalls.
