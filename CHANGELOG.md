@@ -3,6 +3,19 @@
 All notable changes to the 2.0 line. This is a clean rewrite of Bouzid FM:
 Google-only, TUI-first, with the real mastered station imaging.
 
+## 1.2.4 (2026-06-16)
+
+- **New: `bouzid music-reset` — make AzuraCast use only your current music.**
+  AzuraCast keeps its OWN copy of every imported track (in its Docker media
+  storage), so deleting a song from your local library never took it off the
+  air — the old copy kept playing and `bouzid rescan` only ever *added*. The new
+  command reconciles the two: it removes every track in AzuraCast's music-crate
+  folders (morning/daytime/afternoon/evening/night/overnight/friday/weekend)
+  that no longer exists in your local MUSIC_DIR, re-imports anything new, then
+  re-applies the weekly schedule. News, Jingles and show folders are never
+  touched. Run `bouzid music-reset --dry-run` first to preview exactly what
+  would be removed.
+
 ## 1.2.3 (2026-06-16)
 
 - **Updating is now just `git pull` — you do NOT need to re-run `install.sh`.**

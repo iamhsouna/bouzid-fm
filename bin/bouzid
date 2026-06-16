@@ -55,6 +55,9 @@ Content
   fetch --clear NAME    Delete a category's downloaded tracks
   fetch-status [--watch]  Show music-download progress
   rescan                Import the music library into AzuraCast + apply schedule
+  music-reset [--dry-run]  Make AzuraCast match your local music: remove tracks
+                        you deleted locally, re-import, reschedule (--dry-run
+                        only lists what would be removed)
   sync [show]           Two-way sync a library (or all) with AzuraCast
   reset-assets          Wipe assets/ & rebuild the clean structure, then rescan
 
@@ -192,6 +195,9 @@ case "$cmd" in
     c_blue "Restarting broadcasting so changes go live ..."
     python3 scripts/azuracast.py restart >/dev/null 2>&1 || true
     c_green "Done. Check it with: bouzid now";;
+  music-reset|reset-music)
+    ensure_api
+    python3 scripts/music_reset.py "$@";;
   tui)
     PY="python3"; [ -x "$ROOT/.venv/bin/python" ] && PY="$ROOT/.venv/bin/python"
     exec "$PY" scripts/bouzid_tui.py;;
