@@ -1,0 +1,57 @@
+{
+  "description": "Sidi Bouzid Pro — full community radio schedule for interior Tunisia: agriculture-focused mornings, local heritage prime time, family evenings, Friday spiritual/heritage, weekend lifestyle",
+  "dayparts": {
+    "overnight": {"label": "الليل العميق \u2014 Deep Night",                "playlist": "ambient_west",   "news_every": 180, "jingle": false},
+    "morning":   {"label": "فجر وصباح \u2014 Dawn to Morning",              "playlist": "calm_morning",  "news_every": 30,  "jingle": true},
+    "midday":    {"label": "الضحى \u2014 Mid-morning",                     "playlist": "daytime_mix",   "news_every": 60,  "jingle": true},
+    "noon_bull": {"label": "نشرة الظهر \u2014 Noon News",                   "playlist": "daytime_mix",   "news_every": 30,  "jingle": true},
+    "afternoon": {"label": "بعد الظهر \u2014 Shaabi / Malouf",              "playlist": "shaabi_malouf", "news_every": 60,  "jingle": true},
+    "evening":   {"label": "العصر والمغرب \u2014 Late / Evening Prime",    "playlist": "tarab_khaleeji","news_every": 30,  "jingle": true},
+    "night":     {"label": "ليلة تونسية \u2014 Tunisian Night",            "playlist": "tunisian_best", "news_every": 90,  "jingle": false},
+    "fri_eve":   {"label": "ليلة الجمعة \u2014 Friday Heritage",           "playlist": "friday_classic","news_every": 60,  "jingle": true},
+    "wknd_eve":  {"label": "سهرة الويكاند \u2014 Weekend Celebration",    "playlist": "weekend_party", "news_every": 90,  "jingle": true}
+  },
+  "templates": {
+    "weekday": [
+      {"start": "00:00", "end": "05:00", "daypart": "overnight"},
+      {"start": "05:00", "end": "06:30", "daypart": "morning",    "show": "news"},
+      {"start": "06:30", "end": "07:00", "daypart": "morning",    "show": "prayer"},
+      {"start": "07:00", "end": "09:00", "daypart": "morning",    "show": "farmer"},
+      {"start": "09:00", "end": "12:00", "daypart": "midday",     "show": "didyouknow"},
+      {"start": "12:00", "end": "13:00", "daypart": "noon_bull",  "show": "news"},
+      {"start": "13:00", "end": "16:00", "daypart": "afternoon",  "show": "health"},
+      {"start": "16:00", "end": "17:00", "daypart": "afternoon",  "show": "figures"},
+      {"start": "17:00", "end": "18:00", "daypart": "evening",    "show": "news"},
+      {"start": "18:00", "end": "19:00", "daypart": "evening",    "show": "sidibouzid"},
+      {"start": "19:00", "end": "20:00", "daypart": "evening",    "show": "cook"},
+      {"start": "20:00", "end": "22:00", "daypart": "night",      "show": "folktale"},
+      {"start": "22:00", "end": "24:00", "daypart": "night"}
+    ],
+    "friday": [
+      {"start": "00:00", "end": "05:00", "daypart": "overnight"},
+      {"start": "05:00", "end": "06:00", "daypart": "morning",    "show": "prayer"},
+      {"start": "06:00", "end": "08:00", "daypart": "morning",    "show": "heritagemusic"},
+      {"start": "08:00", "end": "11:00", "daypart": "midday",     "show": "quiz"},
+      {"start": "11:00", "end": "12:00", "daypart": "midday"},
+      {"start": "12:00", "end": "13:30", "daypart": "noon_bull",  "show": "news"},
+      {"start": "13:30", "end": "17:00", "daypart": "afternoon",  "show": "songstory"},
+      {"start": "17:00", "end": "18:00", "daypart": "fri_eve",    "show": "sport"},
+      {"start": "18:00", "end": "19:00", "daypart": "fri_eve",    "show": "folktale"},
+      {"start": "19:00", "end": "21:00", "daypart": "fri_eve",    "show": "events"},
+      {"start": "21:00", "end": "24:00", "daypart": "night"}
+    ],
+    "weekend": [
+      {"start": "00:00", "end": "06:00", "daypart": "overnight"},
+      {"start": "06:00", "end": "07:00", "daypart": "morning",    "show": "prayer"},
+      {"start": "07:00", "end": "09:00", "daypart": "morning",    "show": "cook"},
+      {"start": "09:00", "end": "10:00", "daypart": "midday",     "show": "family"},
+      {"start": "10:00", "end": "12:00", "daypart": "midday",     "show": "home"},
+      {"start": "12:00", "end": "13:00", "daypart": "noon_bull",  "show": "news"},
+      {"start": "13:00", "end": "15:00", "daypart": "afternoon",  "show": "sport"},
+      {"start": "15:00", "end": "17:00", "daypart": "afternoon",  "show": "health"},
+      {"start": "17:00", "end": "19:00", "daypart": "evening",    "show": "songstory"},
+      {"start": "19:00", "end": "23:00", "daypart": "wknd_eve",   "show": "events"},
+      {"start": "23:00", "end": "24:00", "daypart": "night"}
+    ]
+  }
+}

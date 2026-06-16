@@ -1,0 +1,66 @@
+{
+  "station_name": "Bouzid FM",
+  "timezone": "Africa/Tunis",
+  "jingle_every_songs": 4,
+  "jingle_folder": "jingles",
+  "news_folder": "news",
+  "playlists": {
+    "calm_morning":   {"label": "صباح هادئ (Calm / Jazz / Pop)",  "folder": "morning"},
+    "daytime_mix":    {"label": "خليط النهار (Daytime Mix)",       "folder": "daytime"},
+    "shaabi_malouf":  {"label": "شعبي ومالوف (Shaabi / Malouf)",   "folder": "afternoon"},
+    "tarab_khaleeji": {"label": "طرب وخليجي (Tarab / Khaleeji)",   "folder": "evening"},
+    "tunisian_best":  {"label": "أجمل التونسي (Best of Tunisian)",  "folder": "night"},
+    "ambient_west":   {"label": "ليل هادئ (Ambient / Chill)",       "folder": "overnight"},
+    "friday_classic": {"label": "كلاسيك الجمعة (Classic Malouf)",    "folder": "friday"},
+    "weekend_party":  {"label": "سهرة الويكاند (Weekend Party)",    "folder": "weekend"}
+  },
+  "dayparts": {
+    "overnight": {"label": "ليل بوزيد",        "playlist": "ambient_west",   "news_every": 120, "jingle": false},
+    "morning":   {"label": "صباح الخير تونس",  "playlist": "calm_morning",  "news_every": 60,  "jingle": true},
+    "midday":    {"label": "وسط النهار",        "playlist": "daytime_mix",   "news_every": 60,  "jingle": true},
+    "noon_bull": {"label": "نشرة الظهر",        "playlist": "daytime_mix",   "news_every": 30,  "jingle": true},
+    "afternoon": {"label": "بعد الظهر",         "playlist": "shaabi_malouf", "news_every": 60,  "jingle": true},
+    "evening":   {"label": "المساء",            "playlist": "tarab_khaleeji","news_every": 60,  "jingle": true},
+    "night":     {"label": "ليلة تونسية",       "playlist": "tunisian_best", "news_every": 90,  "jingle": false},
+    "fri_eve":   {"label": "سهرة الجمعة",       "playlist": "friday_classic","news_every": 90,  "jingle": true},
+    "wknd_eve":  {"label": "سهرة الويكاند",    "playlist": "weekend_party", "news_every": 90,  "jingle": true}
+  },
+  "templates": {
+    "weekday": [
+      {"start": "00:00", "end": "06:00", "daypart": "overnight"},
+      {"start": "06:00", "end": "09:00", "daypart": "morning"},
+      {"start": "09:00", "end": "12:00", "daypart": "midday"},
+      {"start": "12:00", "end": "13:00", "daypart": "noon_bull"},
+      {"start": "13:00", "end": "18:00", "daypart": "afternoon"},
+      {"start": "18:00", "end": "20:00", "daypart": "evening"},
+      {"start": "20:00", "end": "24:00", "daypart": "night"}
+    ],
+    "friday": [
+      {"start": "00:00", "end": "06:00", "daypart": "overnight"},
+      {"start": "06:00", "end": "09:00", "daypart": "morning"},
+      {"start": "09:00", "end": "12:00", "daypart": "midday"},
+      {"start": "12:00", "end": "13:30", "daypart": "noon_bull"},
+      {"start": "13:30", "end": "18:00", "daypart": "afternoon"},
+      {"start": "18:00", "end": "21:00", "daypart": "fri_eve"},
+      {"start": "21:00", "end": "24:00", "daypart": "night"}
+    ],
+    "weekend": [
+      {"start": "00:00", "end": "07:00", "daypart": "overnight"},
+      {"start": "07:00", "end": "10:00", "daypart": "morning"},
+      {"start": "10:00", "end": "13:00", "daypart": "midday"},
+      {"start": "13:00", "end": "14:00", "daypart": "noon_bull"},
+      {"start": "14:00", "end": "19:00", "daypart": "afternoon"},
+      {"start": "19:00", "end": "23:00", "daypart": "wknd_eve"},
+      {"start": "23:00", "end": "24:00", "daypart": "night"}
+    ]
+  },
+  "week": {
+    "0": {"ar": "الإثنين", "en": "Monday",    "template": "weekday"},
+    "1": {"ar": "الثلاثاء", "en": "Tuesday",   "template": "weekday"},
+    "2": {"ar": "الأربعاء", "en": "Wednesday", "template": "weekday"},
+    "3": {"ar": "الخميس",   "en": "Thursday",  "template": "weekday"},
+    "4": {"ar": "الجمعة",   "en": "Friday",    "template": "friday"},
+    "5": {"ar": "السبت",    "en": "Saturday",  "template": "weekend"},
+    "6": {"ar": "الأحد",    "en": "Sunday",    "template": "weekend"}
+  }
+}

@@ -30,6 +30,8 @@ import time
 import urllib.error
 import urllib.request
 
+from library import show_dir
+
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 
@@ -52,6 +54,15 @@ def _hhmm(s):
     h, m = s.split(":")
     v = int(h) * 100 + int(m)
     return 2359 if v >= 2400 else v
+
+
+def _show_folder(slug):
+    """Slug-relative folder under music root (e.g. 'news', 'cook')."""
+    sd = show_dir(slug)
+    md = _music_dir()
+    if sd.startswith(md):
+        return os.path.relpath(sd, md)
+    return slug
 
 
 # Audio extensions recognised everywhere (matches AzuraCast.AUDIO_EXTS).
@@ -718,6 +729,35 @@ class AzuraCast:
                 "include_in_on_demand": True,
                 # no schedule_items => general rotation, always eligible
             }, all_music_folders))
+
+        # 1c) Scheduled shows (news, cook, sidibouzid, ...). Each show that has
+        #     at least one scheduled time window gets its own AzuraCast playlist
+        #     pointing to its episode folder. The playlist has a schedule so it
+        #     only plays during its window; any time gaps fall through to music.
+        _preset_shows = set(getattr(cfg, "SHOWS", {}))
+        ordered_shows = sorted(_preset_shows) if _preset_shows else []
+        for slug in ordered_shows:
+            folder = _show_folder(slug)
+            if not folder:
+                continue
+            items = []
+            for entry in getattr(cfg, "SHOWS", {}).get(slug, []):
+                items.append({
+                    "start_time": _hhmm(entry["start"]),
+                    "end_time": _hhmm(entry["end"]),
+                    "days": [int(entry["day"]) + 1],
+                    "loop_once": True,
+                })
+            if not items:
+                continue
+            name = prefix + slug.title()
+            plan.append((name, {
+                "name": name, "type": "default", "source": "songs",
+                "order": "shuffle", "is_enabled": True, "is_jingle": False,
+                "weight": 4, "include_in_requests": False,
+                "include_in_on_demand": True,
+                "schedule_items": items,
+            }, [folder]))
 
         # 2) News: one playlist per distinct cadence.
         cad_groups = {}

@@ -3,6 +3,31 @@
 All notable changes to the 2.0 line. This is a clean rewrite of Bouzid FM:
 Google-only, TUI-first, with the real mastered station imaging.
 
+## 1.4.0 (2026-06-16)
+
+- **Schedule tab with full visual editing.** New dedicated tab in the TUI replaces the
+  old "Weekly schedule" button cluster in the Music tab. Features: template selector
+  (weekday/friday/weekend) with show/hide toggling, editable time slots with start/end/
+  daypart/show pickers, and daypart properties (label, news_every, jingle on/off).
+- **Show scheduling.** Each time slot can optionally play a show (news, cook,
+  sidibouzid, farmer, etc.). When set, `build_schedule_plan()` creates an AzuraCast
+  playlist with `loop_once` for that show's episode folder, scheduled at the slot
+  window. Save & Apply writes `schedule_data.json` and deploys to AzuraCast in one
+  click.
+- **Preset system.** `config/presets/` stores complete schedule templates as JSON.
+  The Schedule tab has a "Load preset" dropdown (Default + Sidi Bouzid Pro). Selecting
+  a preset fills the entire form (dayparts + templates) — still needs Save & Apply.
+- **Sidi Bouzid Pro preset.** Professionally tuned for interior Tunisia: agriculture-
+  focused mornings (farmer show at 7 AM), Fajr–Isha prayer anchors, 30-min news
+  cadence during peak hours, sidibouzid flagship at 18:00, folktale family evening,
+  Friday heritage & quiz, weekend lifestyle (cook, sport, events). Uses 16 different
+  shows across the week.
+- **Schedule slot limit raised from 8 → 14** to accommodate richer schedules.
+- **Schedule config now JSON-backed.** `config/schedule_data.json` is the single
+  source of truth; `config/schedule_config.py` loads it and exposes the same Python
+  API. Also exposes a new `SHOWS` attribute mapping show slugs to their time windows
+  for the AzuraCast schedule builder.
+
 ## 1.3.1 (2026-06-16)
 
 - **Populated music playlists for all 8 crates.** Researched and verified Anghami

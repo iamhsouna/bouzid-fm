@@ -221,6 +221,52 @@ def voice_options(include_auto=False):
 
 
 # --------------------------------------------------------------------------- #
+#  Schedule helpers
+# --------------------------------------------------------------------------- #
+_SCHED_JSON = os.path.join(ROOT, "config", "schedule_data.json")
+_PRESETS_DIR = os.path.join(ROOT, "config", "presets")
+_SCHED_MAX_SLOTS = 14
+
+
+def _sched_load_json():
+    try:
+        with open(_SCHED_JSON, encoding="utf-8") as _f:
+            return json.load(_f)
+    except Exception:  # noqa: BLE001
+        return {"playlists": {}, "dayparts": {}, "templates": {}}
+
+
+def _list_presets():
+    """Return list of (label, slug) for available schedule presets."""
+    if not os.path.isdir(_PRESETS_DIR):
+        return []
+    out = []
+    for fn in sorted(os.listdir(_PRESETS_DIR)):
+        if fn.endswith(".json"):
+            slug = fn[:-5]
+            try:
+                with open(os.path.join(_PRESETS_DIR, fn), encoding="utf-8") as _f:
+                    d = json.load(_f)
+                label = d.get("description", slug)
+            except Exception:  # noqa: BLE001
+                label = slug
+            out.append((label[:60], slug))
+    return out
+
+
+def _load_preset(slug):
+    """Return {dayparts, templates} from a preset file, or None."""
+    path = os.path.join(_PRESETS_DIR, slug + ".json")
+    try:
+        with open(path, encoding="utf-8") as _f:
+            d = json.load(_f)
+        return {"dayparts": d.get("dayparts", {}),
+                "templates": d.get("templates", {})}
+    except Exception:  # noqa: BLE001
+        return None
+
+
+# --------------------------------------------------------------------------- #
 #  The app
 # --------------------------------------------------------------------------- #
 class BouzidApp(App):
@@ -231,6 +277,65 @@ class BouzidApp(App):
     #body { height: 1fr; }
     .pad { padding: 1 2; }
     .row { height: auto; }
+    .sched-slot-num { width: 8; padding-top: 1; }
+    /* Hide non-active template rows by default; _schedule_show_template() toggles */
+    #sched-slot-friday-0,
+    #sched-slot-friday-1,
+    #sched-slot-friday-2,
+    #sched-slot-friday-3,
+    #sched-slot-friday-4,
+    #sched-slot-friday-5,
+    #sched-slot-friday-6,
+    #sched-slot-friday-7,
+    #sched-slot-friday-8,
+    #sched-slot-friday-9,
+    #sched-slot-friday-10,
+    #sched-slot-friday-11,
+    #sched-slot-friday-12,
+    #sched-slot-friday-13,
+    #sched-slot-weekend-0,
+    #sched-slot-weekend-1,
+    #sched-slot-weekend-2,
+    #sched-slot-weekend-3,
+    #sched-slot-weekend-4,
+    #sched-slot-weekend-5,
+    #sched-slot-weekend-6,
+    #sched-slot-weekend-7,
+    #sched-slot-weekend-8,
+    #sched-slot-weekend-9,
+    #sched-slot-weekend-10,
+    #sched-slot-weekend-11,
+    #sched-slot-weekend-12,
+    #sched-slot-weekend-13,
+    #sched-show-row-friday-0,
+    #sched-show-row-friday-1,
+    #sched-show-row-friday-2,
+    #sched-show-row-friday-3,
+    #sched-show-row-friday-4,
+    #sched-show-row-friday-5,
+    #sched-show-row-friday-6,
+    #sched-show-row-friday-7,
+    #sched-show-row-friday-8,
+    #sched-show-row-friday-9,
+    #sched-show-row-friday-10,
+    #sched-show-row-friday-11,
+    #sched-show-row-friday-12,
+    #sched-show-row-friday-13,
+    #sched-show-row-weekend-0,
+    #sched-show-row-weekend-1,
+    #sched-show-row-weekend-2,
+    #sched-show-row-weekend-3,
+    #sched-show-row-weekend-4,
+    #sched-show-row-weekend-5,
+    #sched-show-row-weekend-6,
+    #sched-show-row-weekend-7,
+    #sched-show-row-weekend-8,
+    #sched-show-row-weekend-9,
+    #sched-show-row-weekend-10,
+    #sched-show-row-weekend-11,
+    #sched-show-row-weekend-12,
+    #sched-show-row-weekend-13
+    { display: none; }
     .hint { color: $text-muted; margin-bottom: 1; }
     .section { text-style: bold; color: $accent; margin-top: 1; }
     Button { margin: 1 1 0 0; }
@@ -274,6 +379,8 @@ class BouzidApp(App):
                 yield from self._jingles_tab()
             with TabPane("\U0001F3B6 Music", id="tab-music"):
                 yield from self._music_tab()
+            with TabPane("\U0001F4C5 Schedule", id="tab-schedule"):
+                yield from self._schedule_tab()
             with TabPane("\u2699 Settings", id="tab-settings"):
                 yield from self._settings_tab()
         with Horizontal(id="logbar"):
@@ -501,7 +608,7 @@ class BouzidApp(App):
     # ---- Music ----------------------------------------------------------- #
     def _music_tab(self):
         with VerticalScroll(classes="pad"):
-            yield Static("Music library & scheduling", classes="section")
+            yield Static("Music library & fetching", classes="section")
             yield Static("Library: %s  \u2014  browse the tracks in the "
                          "Library tab (filter \"Music pool\")." % music_root(),
                          classes="hint")
@@ -525,10 +632,88 @@ class BouzidApp(App):
                              id="music-fetch-all", variant="warning")
                 yield Button("Fetch progress", id="music-status")
                 yield Button("Rescan into AzuraCast", id="music-rescan")
+
+    # ---- Schedule --------------------------------------------------------- #
+    @staticmethod
+    def _sched_daypart_options():
+        _dp = ("overnight", "morning", "midday", "noon_bull",
+               "afternoon", "evening", "night", "fri_eve", "wknd_eve")
+        _cfg = _sched_load_json()
+        return [(str(_cfg["dayparts"].get(d, {})
+                .get("label", d)), d) for d in _dp]
+
+    @staticmethod
+    def _sched_show_options():
+        opts = [("\u2014 None \u2014", "")]
+        for slug in list_show_slugs():
+            opts.append((_preset_label(slug), slug))
+        return opts
+
+    def _schedule_tab(self):
+        _dp_opts = self._sched_daypart_options()
+        _show_opts = self._sched_show_options()
+        _preset_opts = _list_presets()
+        with VerticalScroll(classes="pad"):
             yield Static("Weekly schedule", classes="section")
+            yield Static("Edit time slots and daypart properties. "
+                         "Save writes to config/schedule_data.json and applies "
+                         "to AzuraCast immediately.",
+                         classes="hint")
+            if _preset_opts:
+                yield Label("Load preset")
+                yield Select(_preset_opts, id="sched-preset",
+                             allow_blank=True)
+            yield Label("Template")
+            yield Select(
+                [("Weekday (Mon\u2013Thu)", "weekday"),
+                 ("Friday", "friday"),
+                 ("Weekend (Sat\u2013Sun)", "weekend")],
+                id="sched-template", allow_blank=False, value="weekday")
+            yield Static("", classes="spacer")
+            yield Static("Time slots \u2014 start, end, daypart, show",
+                         classes="section")
+            for _tmpl_id in ("weekday", "friday", "weekend"):
+                for _si in range(_SCHED_MAX_SLOTS):
+                    with Horizontal(classes="row",
+                                    id="sched-slot-%s-%d" % (_tmpl_id, _si)):
+                        yield Label("Slot %d" % (_si + 1),
+                                    classes="sched-slot-num")
+                        yield Input(placeholder="00:00",
+                                    id="sched-start-%s-%d"
+                                    % (_tmpl_id, _si))
+                        yield Input(placeholder="06:00",
+                                    id="sched-end-%s-%d"
+                                    % (_tmpl_id, _si))
+                        yield Select(_dp_opts,
+                                     id="sched-dp-%s-%d"
+                                     % (_tmpl_id, _si),
+                                     allow_blank=False)
+                    with Horizontal(classes="row",
+                                    id="sched-show-row-%s-%d"
+                                    % (_tmpl_id, _si)):
+                        yield Label("", classes="sched-slot-num")
+                        yield Select(_show_opts,
+                                     id="sched-show-%s-%d"
+                                     % (_tmpl_id, _si),
+                                     allow_blank=True)
+                yield Static("", classes="spacer")
+            yield Static("Daypart properties", classes="section")
+            for _dp_key in ("overnight", "morning", "midday", "noon_bull",
+                            "afternoon", "evening", "night", "fri_eve",
+                            "wknd_eve"):
+                yield Static("", id="sched-dp-label-%s" % _dp_key)
+                with Horizontal(classes="row"):
+                    yield Label("News every (min)")
+                    yield Input(placeholder="60",
+                                id="sched-dp-news-%s" % _dp_key)
+                    yield Label("Jingle")
+                    yield Select([("Yes", "true"), ("No", "false")],
+                                 id="sched-dp-jingle-%s" % _dp_key,
+                                 allow_blank=False)
+            yield Static("", classes="spacer")
             with Horizontal(classes="row"):
                 yield Button("Preview grid", id="sched-grid")
-                yield Button("Apply schedule", id="sched-apply",
+                yield Button("Save & Apply schedule", id="sched-save",
                              variant="success")
                 yield Button("Apply (reset)", id="sched-reset",
                              variant="warning")
@@ -611,6 +796,10 @@ class BouzidApp(App):
             self._music_load_pl()
         except Exception:  # noqa: BLE001
             pass
+        try:
+            self._schedule_load()
+        except Exception:  # noqa: BLE001
+            pass
 
     def on_select_changed(self, event: Select.Changed) -> None:
         sid = getattr(event.select, "id", None)
@@ -620,6 +809,10 @@ class BouzidApp(App):
             self._img_refresh()
         elif sid == "music-crate":
             self._music_load_pl()
+        elif sid == "sched-template":
+            self._schedule_show_template()
+        elif sid == "sched-preset":
+            self._schedule_load_preset()
 
     # ===================================================================== #
     #  Library tab
@@ -1309,6 +1502,8 @@ class BouzidApp(App):
             return self.run_cmd(
                 self.py("azuracast.py", "apply-schedule", "--reset"),
                 "Applying schedule (reset)")
+        if bid == "sched-save":
+            return self._schedule_save()
 
         # Settings
         if bid == "set-save":
@@ -1474,6 +1669,207 @@ class BouzidApp(App):
         self._lib_refresh()
         self.run_cmd(self.py("library.py", "sync", "music"),
                      "Syncing the music pool with AzuraCast")
+
+    # ---- Schedule helpers ------------------------------------------------- #
+    def _schedule_show_template(self):
+        sel = self.query_one("#sched-template", Select)
+        tmpl = str(sel.value) if sel.value and sel.value is not Select.BLANK else "weekday"
+        for _t in ("weekday", "friday", "weekend"):
+            show = _t == tmpl
+            for _si in range(_SCHED_MAX_SLOTS):
+                for _id in ("sched-slot", "sched-show-row"):
+                    try:
+                        self.query_one("#%s-%s-%d" % (_id, _t, _si),
+                                       Horizontal).display = show
+                    except Exception:  # noqa: BLE001
+                        pass
+
+    def _schedule_load(self):
+        cfg = _sched_load_json()
+        dayparts = cfg.get("dayparts", {})
+        templates = cfg.get("templates", {})
+
+        for tmpl_id in ("weekday", "friday", "weekend"):
+            slots = templates.get(tmpl_id, [])
+            for si, slot in enumerate(slots):
+                for qid in ("start", "end"):
+                    try:
+                        self.query_one("#sched-%s-%s-%d" % (qid, tmpl_id, si),
+                                       Input).value = slot.get(qid, "")
+                    except Exception:  # noqa: BLE001
+                        pass
+                try:
+                    self.query_one("#sched-dp-%s-%d" % (tmpl_id, si),
+                                   Select).value = slot.get("daypart", "morning")
+                except Exception:  # noqa: BLE001
+                    pass
+                try:
+                    slug = str(slot.get("show", ""))
+                    self.query_one("#sched-show-%s-%d" % (tmpl_id, si),
+                                   Select).value = slug if slug else Select.BLANK
+                except Exception:  # noqa: BLE001
+                    pass
+            for si in range(len(slots), _SCHED_MAX_SLOTS):
+                self.query_one("#sched-start-%s-%d" % (tmpl_id, si),
+                               Input).value = ""
+                self.query_one("#sched-end-%s-%d" % (tmpl_id, si),
+                               Input).value = ""
+                # Leave blank Select at default
+
+        for dpk in ("overnight", "morning", "midday", "noon_bull",
+                    "afternoon", "evening", "night", "fri_eve", "wknd_eve"):
+            dp = dayparts.get(dpk, {})
+            try:
+                label = dp.get("label", dpk)
+                self.query_one("#sched-dp-label-%s" % dpk,
+                               Static).update(label)
+                self.query_one("#sched-dp-news-%s" % dpk,
+                               Input).value = str(dp.get("news_every", ""))
+                jv = "true" if dp.get("jingle", False) else "false"
+                self.query_one("#sched-dp-jingle-%s" % dpk,
+                               Select).value = jv
+            except Exception:  # noqa: BLE001
+                pass
+
+        self._schedule_show_template()
+
+    def _schedule_load_preset(self):
+        sel = self.query_one("#sched-preset", Select)
+        slug = str(sel.value) if sel.value and sel.value is not Select.BLANK else ""
+        if not slug:
+            return
+        data = _load_preset(slug)
+        if data is None:
+            return self.log_line("  \u2717 preset '%s' not found" % slug)
+
+        dayparts = data.get("dayparts", {})
+        templates = data.get("templates", {})
+
+        # Fill templates
+        for tmpl_id in ("weekday", "friday", "weekend"):
+            slots = templates.get(tmpl_id, [])
+            for si, slot in enumerate(slots):
+                for qid in ("start", "end"):
+                    try:
+                        self.query_one(
+                            "#sched-%s-%s-%d" % (qid, tmpl_id, si),
+                            Input).value = slot.get(qid, "")
+                    except Exception:  # noqa: BLE001
+                        pass
+                try:
+                    self.query_one(
+                        "#sched-dp-%s-%d" % (tmpl_id, si),
+                        Select).value = slot.get("daypart", "morning")
+                except Exception:  # noqa: BLE001
+                    pass
+                try:
+                    sslug = str(slot.get("show", ""))
+                    self.query_one(
+                        "#sched-show-%s-%d" % (tmpl_id, si),
+                        Select).value = sslug if sslug else Select.BLANK
+                except Exception:  # noqa: BLE001
+                    pass
+            # Clear unused slots
+            for si in range(len(slots), _SCHED_MAX_SLOTS):
+                self.query_one("#sched-start-%s-%d" % (tmpl_id, si),
+                               Input).value = ""
+                self.query_one("#sched-end-%s-%d" % (tmpl_id, si),
+                               Input).value = ""
+
+        # Fill daypart properties
+        for dpk in ("overnight", "morning", "midday", "noon_bull",
+                    "afternoon", "evening", "night", "fri_eve", "wknd_eve"):
+            dp = dayparts.get(dpk, {})
+            try:
+                label = dp.get("label", dpk)
+                self.query_one("#sched-dp-label-%s" % dpk,
+                               Static).update(label)
+                self.query_one("#sched-dp-news-%s" % dpk,
+                               Input).value = str(dp.get("news_every", ""))
+                jv = "true" if dp.get("jingle", False) else "false"
+                self.query_one("#sched-dp-jingle-%s" % dpk,
+                               Select).value = jv
+            except Exception:  # noqa: BLE001
+                pass
+
+        self._schedule_show_template()
+        self.log_line("  \u2713 preset '%s' loaded \u2014 review and Save & Apply"
+                       % slug)
+
+    def _schedule_save(self):
+        try:
+            cfg = _sched_load_json()
+            dayparts = cfg.setdefault("dayparts", {})
+            templates = cfg.setdefault("templates", {})
+            cfg.setdefault("playlists", {})
+
+            for tmpl_id in ("weekday", "friday", "weekend"):
+                slots = []
+                for si in range(_SCHED_MAX_SLOTS):
+                    try:
+                        start = self.query_one(
+                            "#sched-start-%s-%d" % (tmpl_id, si),
+                            Input).value.strip()
+                        end = self.query_one(
+                            "#sched-end-%s-%d" % (tmpl_id, si),
+                            Input).value.strip()
+                        dp = self.query_one(
+                            "#sched-dp-%s-%d" % (tmpl_id, si),
+                            Select).value
+                        if dp is None or dp is Select.BLANK:
+                            dp = "morning"
+                        show = self.query_one(
+                            "#sched-show-%s-%d" % (tmpl_id, si),
+                            Select).value
+                        if show is None or show is Select.BLANK:
+                            show = ""
+                        slot = {"start": start, "end": end,
+                                "daypart": str(dp)}
+                        if show:
+                            slot["show"] = str(show)
+                        if start or end:
+                            slots.append(slot)
+                    except Exception:  # noqa: BLE001
+                        pass
+                templates[tmpl_id] = slots
+
+            for dpk in ("overnight", "morning", "midday", "noon_bull",
+                        "afternoon", "evening", "night", "fri_eve",
+                        "wknd_eve"):
+                try:
+                    label = self.query_one(
+                        "#sched-dp-label-%s" % dpk, Static).renderable
+                except Exception:  # noqa: BLE001
+                    label = dpk
+                try:
+                    news_v = self.query_one(
+                        "#sched-dp-news-%s" % dpk, Input).value.strip()
+                    news_int = int(news_v) if news_v else 60
+                except Exception:  # noqa: BLE001
+                    news_int = 60
+                try:
+                    jv = self.query_one(
+                        "#sched-dp-jingle-%s" % dpk, Select).value
+                    jingle = jv == "true"
+                except Exception:  # noqa: BLE001
+                    jingle = True
+                # Preserve the playlist key
+                old = dayparts.get(dpk, {})
+                dayparts[dpk] = {
+                    "label": label, "playlist": old.get("playlist", "daytime_mix"),
+                    "news_every": news_int, "jingle": jingle
+                }
+
+            from pathlib import Path  # noqa: PLC0415
+            Path(_SCHED_JSON).write_text(
+                json.dumps(cfg, ensure_ascii=False, indent=2) + "\n",
+                encoding="utf-8")
+        except Exception as e:  # noqa: BLE001
+            return self.log_line("  \u2717 could not save schedule: %s" % e)
+
+        self.log_line("  \u2713 schedule saved, applying\u2026")
+        self.run_cmd(self.py("azuracast.py", "apply-schedule"),
+                     "Applying updated schedule")
 
     def _save_settings(self):
         updates = {
