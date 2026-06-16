@@ -406,6 +406,16 @@ class BouzidApp(App):
                 yield Button("\u25c0 Previous track", id="dash-prev")
                 yield Button("Skip track \u25b6", id="dash-skip")
                 yield Button("Show URLs", id="dash-urls")
+            yield Static("Auto-scheduler", classes="section")
+            yield Static("Generates shows before their scheduled air time. "
+                         "Runs every 5 min, looking 30 min ahead.",
+                         classes="hint")
+            with Horizontal(classes="row"):
+                yield Button("\u25b6 Start scheduler", id="dash-sched-start",
+                             variant="success")
+                yield Button("\u25a0 Stop scheduler", id="dash-sched-stop",
+                             variant="error")
+                yield Button("Scheduler status", id="dash-sched-status")
 
     # ---- Studio: one control screen for every show ----------------------- #
     def _studio_tab(self):
@@ -1453,6 +1463,15 @@ class BouzidApp(App):
                                 "Playing previous track")
         if bid == "dash-urls":
             return self.run_cmd(self.bouzid("urls"), "Admin URLs")
+        if bid == "dash-sched-start":
+            return self.run_cmd(self.bouzid("scheduler", "start"),
+                                "Starting scheduler")
+        if bid == "dash-sched-stop":
+            return self.run_cmd(self.bouzid("scheduler", "stop"),
+                                "Stopping scheduler")
+        if bid == "dash-sched-status":
+            return self.run_cmd(self.bouzid("scheduler", "status"),
+                                "Scheduler status")
 
         # Studio (unified shows + news)
         if bid == "studio-refresh":

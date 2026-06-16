@@ -128,12 +128,23 @@ Usage: bouzid <command> [options]
 
 —————————————————————————— Live Broadcast ——————————————————
   now                    Show what's currently playing
-                           $ bouzid now
+                            $ bouzid now
   skip                   Skip the current track
-                           $ bouzid skip
+                            $ bouzid skip
   previous [--back N]    Replay a previous track
-                           $ bouzid previous                     # last track
-                           $ bouzid previous --back 2            # 2 tracks ago
+                            $ bouzid previous                     # last track
+                            $ bouzid previous --back 2            # 2 tracks ago
+
+—————————————————————————— Scheduler ————————————————————————
+  scheduler [start]      Start auto-show generation (background daemon)
+                            $ bouzid scheduler
+                            $ bouzid scheduler start
+  scheduler stop         Stop the scheduler daemon
+                            $ bouzid scheduler stop
+  scheduler status       Check if the scheduler is running
+                            $ bouzid scheduler status
+  scheduler once         Run one generation pass and exit
+                            $ bouzid scheduler once
 
 —————————————————————————— Voice ———————————————————————————
   say [text]             Test the current Gemini voice
@@ -255,6 +266,44 @@ case "$cmd" in
   flush|wipe)
     ensure_api
     python3 scripts/azuracast.py flush "$@";;
+  scheduler)
+    sub="${1:-start}"; shift || true
+    pid_file="${ROOT}/data/scheduler.pid"
+    import_script="scripts/scheduler.py"
+    case "$sub" in
+      start|"")
+        mkdir -p data
+        if [ -f "$pid_file" ] && kill -0 "$(cat "$pid_file")" 2>/dev/null; then
+          c_blue "Scheduler is already running (PID $(cat "$pid_file"))."
+        else
+          rm -f "$pid_file"
+          nohup python3 "$import_script" > data/scheduler.log 2>&1 &
+          pid=$!
+          echo "$pid" > "$pid_file"
+          c_green "Scheduler started (PID $pid)."
+          c_blue "  Logs: tail -f ${ROOT}/data/scheduler.log"
+        fi;;
+      stop)
+        if [ -f "$pid_file" ]; then
+          pid=$(cat "$pid_file")
+          kill "$pid" 2>/dev/null && c_green "Scheduler (PID $pid) stopped." \
+            || c_blue "Scheduler (PID $pid) was not running."
+          rm -f "$pid_file"
+        else
+          c_blue "No scheduler PID file found."
+        fi;;
+      status)
+        if [ -f "$pid_file" ] && kill -0 "$(cat "$pid_file")" 2>/dev/null; then
+          c_green "Scheduler is running (PID $(cat "$pid_file"))."
+        else
+          c_blue "Scheduler is NOT running."
+        fi;;
+      once)
+        python3 "$import_script" --once;;
+      *)
+        c_red "Usage: bouzid scheduler [start|stop|status|once]"
+        exit 1;;
+    esac;;
   tui)
     PY="python3"; [ -x "$ROOT/.venv/bin/python" ] && PY="$ROOT/.venv/bin/python"
     exec "$PY" scripts/bouzid_tui.py;;
