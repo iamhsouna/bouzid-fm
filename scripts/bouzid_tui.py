@@ -209,6 +209,11 @@ class BouzidApp(App):
     #log { height: 12; border: round $primary; padding: 0 1; }
     #logbar { height: auto; }
     DataTable { height: auto; max-height: 14; margin-bottom: 1; }
+    /* Review box for the drafted jingle script. Without an explicit height the
+       TextArea collapses inside the scroll container, so a Gemini-drafted
+       script is loaded but never visible -- the "where is the review box?"
+       bug. Pin it to a fixed, scrollable editing area. */
+    #jingle-script { height: 8; border: round $accent; margin-bottom: 1; }
     #ver { height: 1; color: $text-muted; text-align: right; padding: 0 2; }
     """
 
@@ -262,7 +267,8 @@ class BouzidApp(App):
                 yield Button("Health", id="dash-health")
             with Horizontal(classes="row"):
                 yield Button("Now playing", id="dash-now", variant="primary")
-                yield Button("Skip track", id="dash-skip")
+                yield Button("\u25c0 Previous track", id="dash-prev")
+                yield Button("Skip track \u25b6", id="dash-skip")
                 yield Button("Show URLs", id="dash-urls")
 
     # ---- Studio: one control screen for every show ----------------------- #
@@ -887,7 +893,12 @@ class BouzidApp(App):
             return self.log_line(
                 "  \u2717 no script drafted \u2014 check GEMINI_API_KEY/model")
         try:
-            self.query_one("#jingle-script", TextArea).load_text(txt)
+            ta = self.query_one("#jingle-script", TextArea)
+            ta.load_text(txt)
+            # Force a re-render of the review box: load_text edits the document
+            # but inside a scroll container the widget can fail to repaint, so
+            # the drafted script looks empty even though it was loaded.
+            ta.refresh()
             self.log_line(
                 "  \u2713 script in the review box \u2014 edit it, then Generate")
         except Exception:  # noqa: BLE001
@@ -1167,6 +1178,9 @@ class BouzidApp(App):
                                 "Now playing")
         if bid == "dash-skip":
             return self.run_cmd(self.py("azuracast.py", "skip"), "Skipping")
+        if bid == "dash-prev":
+            return self.run_cmd(self.py("azuracast.py", "previous"),
+                                "Playing previous track")
         if bid == "dash-urls":
             return self.run_cmd(self.bouzid("urls"), "Admin URLs")
 

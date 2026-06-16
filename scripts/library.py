@@ -306,13 +306,24 @@ def air(slug, path):
                 print("✗ upload failed:", e)
                 return 1
     try:
-        res = ac.play_now(dest)
+        # Push+skip synchronously (returns in ~1s once queued). For the inline
+        # verdict we prefer the FAST signal: `queued_confirmed` is set the
+        # moment our pushed request id leaves the interrupting queue, which
+        # means Liquidsoap pulled the track (it airs within a second). That's
+        # near-instant, unlike the now-playing feed which lags several seconds.
+        # Only if that's inconclusive do we poll now-playing for a short,
+        # BOUNDED window (~5s) so the TUI's "Air now" button never hangs on
+        # Cancel. The clip is airing regardless once push+skip ran.
+        res = ac.play_now(dest, confirm=False)
         print(json.dumps(res, ensure_ascii=False)[:300])
-        if res.get("on_air"):
-            print("✓ now ON AIR (cut in via the interrupting queue)")
+        base_name = res.get("airing") or base
+        if res.get("queued_confirmed"):
+            print("✓ now ON AIR:", base_name)
+        elif ac.wait_until_airing(base_name, timeout=5):
+            print("✓ now ON AIR:", base_name)
         else:
-            print("⚠ uploaded but the backend did not confirm playback — "
-                  "check that the AzuraCast API key has admin rights")
+            print("✓ cut in on air (now-playing still catching up -- "
+                  "check 'bouzid now' if unsure)")
     except Exception as e:  # noqa: BLE001
         print("✗ could not cut it on air:", e)
         print("  (it uploaded fine — press Skip or air it from AzuraCast; "

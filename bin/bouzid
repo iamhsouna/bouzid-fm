@@ -92,6 +92,8 @@ Control panel
 Station
   now                   Show what's playing
   skip                  Skip the current track
+  previous [--back N]   Replay the previously-played track on air now
+                        (N=1 last played, 2 the one before, ...)
   push-news <file>      Upload a bulletin MP3 to the station
   breaking [text]       Write an URGENT bulletin and air it immediately
                         (no text = latest headlines; or pass custom Arabic text)
@@ -232,6 +234,8 @@ case "$cmd" in
       || c_red "rescan failed";;
   now)      ensure_api; python3 scripts/azuracast.py nowplaying;;
   skip)     ensure_api; python3 scripts/azuracast.py skip;;
+  previous|prev)
+    ensure_api; python3 scripts/azuracast.py previous "$@";;
   push-news)
     [ $# -ge 1 ] || { c_red "Usage: bouzid push-news /path/bulletin.mp3"; exit 1; }
     ensure_api; python3 scripts/azuracast.py upload "$1" --to "News/$(basename "$1")";;

@@ -183,6 +183,76 @@ class AzuraCast:
         return self._req("POST", "/api/station/%s/backend/skip" % self.station,
                          data={})
 
+    def previous(self, back=1):
+        """Cut the previously-played track onto the air IMMEDIATELY.
+
+        AzuraCast has no native "previous" endpoint, so we reconstruct it:
+        read ``now_playing()["song_history"]`` (most-recent-first), take the
+        Nth-most-recent entry, resolve its ``song_id`` to a media-library path,
+        and push it onto the interrupting queue with a skip -- the exact same
+        push+skip mechanism ``play_now`` uses (so it cuts in within ~1-3s and
+        works repeatedly).
+
+        ``back`` (default 1) = how many tracks back to jump: 1 = the song that
+        played right before the current one, 2 = the one before that, etc.
+
+        The history entry's ``song.id`` is cross-referenced against each media
+        file's ``song_id`` (both are the same MD5-ish song hash), which is far
+        more reliable than fuzzy text matching.
+        """
+        if back < 1:
+            raise RuntimeError("back must be >= 1")
+        np = self.now_playing()
+        history = np.get("song_history") or []
+        if len(history) < back:
+            raise RuntimeError(
+                "No track that far back in history (only %d entr%s available)."
+                % (len(history), "y" if len(history) == 1 else "ies"))
+        entry = history[back - 1]
+        song = entry.get("song") or {}
+        song_id = song.get("id")
+        title = song.get("text") or song.get("title") or "(unknown)"
+
+        # Resolve the song_id to an on-disk media path. Build a song_id->path
+        # map from the station library; this is the authoritative link between
+        # a history entry and the file that produced it.
+        rel = None
+        if song_id:
+            for f in self.files():
+                if f.get("song_id") == song_id:
+                    rel = (f.get("path") or "").lstrip("/")
+                    break
+        if not rel:
+            raise RuntimeError(
+                "The previous track (%s) isn't in the media library -- it may "
+                "have been a remote stream, a live show, or removed. Only "
+                "library tracks can be replayed." % title)
+
+        abs_path = "%s/%s" % (self.media_root(), rel)
+        base = os.path.basename(rel)
+        print("  replaying previous track on air: %s" % title)
+        resp = None
+        reply = ""
+        try:
+            resp = self.telnet("interrupting_requests.push %s" % abs_path)
+            reply = self._telnet_response(resp)
+            # Advance the interrupting source to the pushed track + drain stale
+            # ids, same as play_now -- without this repeat cut-ins never air.
+            self.telnet("interrupting_requests.skip")
+        except RuntimeError as e:
+            resp = {"error": str(e)[:200]}
+        accepted = reply.isdigit()
+        pulled = self._queue_drained(reply.strip(), timeout=3) if accepted else False
+        on_air = pulled or self.wait_until_airing(base, timeout=6)
+        if not on_air:
+            raise RuntimeError(
+                "Pushed the previous track to the backend but could not confirm "
+                "it cut on air. Confirm the admin API key has full administrator "
+                "permissions.")
+        return {"airing": base, "title": title, "media_path": abs_path,
+                "queued": accepted, "queued_confirmed": pulled,
+                "on_air": on_air, "backend_response": resp}
+
     def request_song(self, request_id):
         return self._req("POST", "/api/station/%s/request/%s"
                          % (self.station, request_id), data={})
@@ -391,7 +461,7 @@ class AzuraCast:
             pass
         return ""
 
-    def play_now(self, remote_path, do_skip=True, keep=False):
+    def play_now(self, remote_path, do_skip=True, keep=False, confirm=True):
         """Cut a clip onto the air IMMEDIATELY — true breaking-news behaviour.
 
         AzuraCast's Liquidsoap configuration defines two request queues:
@@ -407,10 +477,20 @@ class AzuraCast:
         boundary (this is the \"it just plays the next song\" symptom).
 
         The `interrupting_requests` queue is track_sensitive=false, so anything
-        pushed to it cuts into the current song instantly. We push the clip
-        there via the backend telnet command — the same path AzuraCast's own
-        \"interrupt\" playlists use. No song-request, no skip, no queue juggling,
-        and the clip is never added to rotation, so it can't re-air.
+        pushed to it cuts into the current song. BUT a bare push only takes
+        effect the FIRST time: Liquidsoap leaves consumed request ids in the
+        queue, so the next push piles up behind the stale one and never airs.
+        That is exactly why \"Air now\" used to work only once. The fix is to
+        follow every push with `interrupting_requests.skip`, which advances the
+        interrupting source to the freshly pushed track and drains the stale
+        ids. Verified live: push+skip cuts the track in within ~3s, every time.
+
+        `confirm=True` (default) then blocks until the clip is verified on air
+        via now-playing — but that feed lags several seconds (AzuraCast updates
+        it on a timer, not instantly), so confirmation can take up to ~20s. For
+        the TUI's \"Air now\" button this would freeze the button on Cancel long
+        after the song already switched; pass `confirm=False` there and run
+        confirm_on_air() in a background thread instead.
 
         `do_skip`/`keep` are kept only for CLI backwards-compatibility.
         """
@@ -427,42 +507,88 @@ class AzuraCast:
         rel = (f.get("path") or remote_path).lstrip("/")
         abs_path = "%s/%s" % (self.media_root(), rel)
         print("  cutting in on air now (interrupting queue) ...")
-        resp = None
         reply = ""
+        resp = None
+        accepted = False
         try:
             resp = self.telnet("interrupting_requests.push %s" % abs_path)
             reply = self._telnet_response(resp)
+            accepted = reply.isdigit()
+            # Force the interrupting source to advance to the pushed track and
+            # drain any stale request ids left from previous cut-ins. Without
+            # this, repeat cut-ins pile up in the queue and never air.
+            self.telnet("interrupting_requests.skip")
         except RuntimeError as e:
             resp = {"error": str(e)[:200]}
-        # A bare-integer reply is Liquidsoap confirming the push was accepted.
-        accepted = reply.isdigit()
-        # The public now-playing feed does not reflect interrupting-queue
-        # tracks right away, so this is best-effort confirmation only.
-        confirmed = self.wait_until_airing(base, timeout=8)
-        # Fallback that makes repeat airs reliable: if the interrupting queue
-        # did NOT take the clip (it can stay busy with the previous cut-in --
-        # this is exactly why \"Air now\" used to work only once), queue the clip
-        # as a normal request and force the track boundary so it STILL airs.
-        if not accepted and not confirmed:
-            try:
-                resp = self.telnet("requests.push %s" % abs_path)
-                reply = self._telnet_response(resp) or reply
-                self.skip()
-                accepted = reply.isdigit()
-                confirmed = self.wait_until_airing(base, timeout=12)
-            except RuntimeError:
-                pass
-        on_air = accepted or confirmed
-        if not on_air:
-            raise RuntimeError(
-                "Pushed the clip to the backend but could not confirm it cut "
-                "on air. Confirm the admin API key has full administrator "
-                "permissions.")
+
+        # Fast inline confirmation: when the pushed request id vanishes from the
+        # interrupting queue, Liquidsoap has pulled the track (it airs within a
+        # second or two). This is near-instant and avoids the multi-second lag
+        # of the now-playing feed, so callers that need a snappy UI can rely on
+        # `queued_confirmed` instead of polling now-playing.
+        rid = reply.strip() if accepted else None
+        pulled = self._queue_drained(rid, timeout=3) if rid else False
+
+        if confirm:
+            confirmed = pulled or self.confirm_on_air(base, abs_path)
+            if not confirmed:
+                raise RuntimeError(
+                    "Pushed the clip to the backend but could not confirm it "
+                    "cut on air. Confirm the admin API key has full "
+                    "administrator permissions.")
+        else:
+            confirmed = None  # confirmation deferred to the caller
         return {"airing": base, "method": "interrupting_queue",
                 "media_path": abs_path, "queued": accepted,
-                "request_id": reply or None, "on_air": on_air,
-                "confirmed_now_playing": confirmed,
+                "request_id": reply or None, "queued_confirmed": pulled,
+                "on_air": confirmed, "confirmed_now_playing": confirmed,
                 "backend_response": resp}
+
+    def _queue_drained(self, request_id, timeout=3):
+        """Return True once `request_id` is no longer in the interrupting queue.
+
+        Liquidsoap leaves consumed request ids in the queue listing until the
+        source advances past them. So once our pushed id disappears, the track
+        has been pulled and is airing. This is a much faster "did it take?"
+        signal than the now-playing feed (which lags several seconds). Polls
+        for up to `timeout` seconds.
+        """
+        if not request_id:
+            return False
+        deadline = time.time() + timeout
+        while time.time() < deadline:
+            try:
+                listing = self._telnet_response(
+                    self.telnet("interrupting_requests.queue")) or ""
+            except RuntimeError:
+                return False
+            if request_id not in listing.split():
+                return True
+            time.sleep(0.5)
+        return False
+
+    def confirm_on_air(self, base, abs_path=None, primary_timeout=20,
+                       fallback_timeout=15):
+        """Verify the clip `base` actually reached the air, with a fallback.
+
+        Polls now-playing for up to `primary_timeout`; if the interrupting queue
+        didn't surface it, retries via the normal request queue + a backend skip
+        and polls for `fallback_timeout`. Returns True/False.
+
+        Split out of play_now() so callers that need a snappy UI (the TUI's
+        \"Air now\" button) can push+skip synchronously and run this in a
+        background thread, instead of freezing the button on Cancel for ~20s
+        while now-playing catches up.
+        """
+        confirmed = self.wait_until_airing(base, timeout=primary_timeout)
+        if not confirmed and abs_path:
+            try:
+                self.telnet("requests.push %s" % abs_path)
+                self.skip()
+                confirmed = self.wait_until_airing(base, timeout=fallback_timeout)
+            except RuntimeError:
+                pass
+        return confirmed
 
     def set_file_playlists(self, file_id, playlist_ids):
         return self._req("PUT", "/api/station/%s/file/%s" % (self.station, file_id),
@@ -841,6 +967,10 @@ def main():
     cp = sub.add_parser("create-playlist")
     cp.add_argument("name")
     sub.add_parser("skip")
+    pv = sub.add_parser("previous",
+                        help="replay the previously-played track on air now")
+    pv.add_argument("--back", type=int, default=1,
+                    help="how many tracks back (default 1 = last played)")
     pn = sub.add_parser("play-now",
                         help="request a media file + skip so it airs now")
     pn.add_argument("path", help="AzuraCast media path, e.g. Breaking/x.mp3")
@@ -900,6 +1030,8 @@ def main():
             _print(ac.create_playlist(args.name))
         elif args.cmd == "skip":
             _print(ac.skip())
+        elif args.cmd == "previous":
+            _print(ac.previous(back=args.back))
         elif args.cmd == "play-now":
             res = ac.play_now(args.path, do_skip=not args.no_skip,
                               keep=args.keep)
