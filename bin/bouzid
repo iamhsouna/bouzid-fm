@@ -31,89 +31,138 @@ c_red()   { printf '\033[1;31m%s\033[0m\n' "$*"; }
 
 usage() {
   cat <<EOF
-Bouzid FM 2.0 control (Google-only)
+Bouzid FM 2.0 — a fully automated AI Tunisian radio station
+          Google-only, TUI-first, AzuraCast backend
 
 Usage: bouzid <command> [options]
 
-Stack
-  start                 Start the radio stack (AzuraCast + n8n)
-  stop                  Stop the stack
-  restart               Restart the stack
-  status                Show container status
-  logs [service]        Tail logs (default: all)
-  health                Check that all ports respond
+—————————————————————————— Stack ——————————————————————————
+  start                  Start the Docker stack (AzuraCast)
+                           $ bouzid start
+  stop                   Stop the stack
+                           $ bouzid stop
+  restart                Restart the stack
+  status                 Show container status
+                           $ bouzid status
+  logs [service]         Tail logs (default: all)
+                           $ bouzid logs azuracast
+  health                 Check that all services respond
+                           $ bouzid health
 
-Voice (Google Gemini TTS)
-  say [text]            Test the current voice -> /tmp/bouzid_tts.mp3
-  voices                List the Google Gemini voices (grouped by gender)
+—————————————————————————— Content —————————————————————————
+  show <slug> [opts]     Generate any preset show by slug
+                           $ bouzid show news --upload
+                           $ bouzid show cook --air
+                           $ bouzid show farmer --play
+                           $ bouzid show news --upload
+                           $ bouzid show cook --script-only
+  shows                  List all preset shows
+                           $ bouzid shows
+  mix [opts]             Mix a voice file with intro/bed/outro
+                           $ bouzid mix voice.mp3 --play
+  breaking [text]        Write an URGENT bulletin and air it NOW
+                           $ bouzid breaking                      # latest headlines
+                           $ bouzid breaking "خبر عاجل: …"        # custom text
+  play-now <file|path>   Air any audio clip immediately
+                           $ bouzid play-now bulletin.mp3
+                           $ bouzid play-now "News/bulletin.mp3"
+  push-news <file>       Upload a bulletin MP3 to the station
+                           $ bouzid push-news bulletin.mp3
 
-Content
-  fetch [--all|--crate NAME]  Download music from Anghami playlists (via yt-dlp)
-  fetch --bg            Download in the background
-  fetch --list          Show the crate -> playlist plan
-  fetch --set NAME URL  Set a category's Anghami playlist (override)
-  fetch --clear NAME    Delete a category's downloaded tracks
-  fetch-status [--watch]  Show music-download progress
-  rescan                Import the music library into AzuraCast + apply schedule
-  music-reset [--dry-run]  Make AzuraCast match your local music: remove tracks
-                        you deleted locally, re-import, reschedule (--dry-run
-                        only lists what would be removed)
-  flush [--dry-run]     Wipe ALL AzuraCast media + 'Bouzid ' playlists (clean
-                        slate). --dry-run lists what would go. Rebuild after
-                        with: bouzid rescan
-  sync [show]           Two-way sync a library (or all) with AzuraCast
-  reset-assets          Wipe assets/ & rebuild the clean structure, then rescan
+  Options for show:
+    --play               Play locally after generation
+    --upload             Upload to AzuraCast (appears in schedule)
+    --air                Upload + cut to live broadcast NOW
+    --script-only        Just write the script, skip TTS (fast & cheap)
+    --no-mix             Skip intro/bed/outro mixing
+    --text "…"           Use custom text instead of generated content
 
-Control panel
-  tui                   Open the full Bouzid FM control panel (TUI)
-  news / cook / sidibouzid [opts]
-                        Generate a show now. These are just presets of the one
-                        engine (news pulls live headlines). Same flags as show.
-  shows                 List every preset show (shows/<slug>.json)
-  show <slug> [opts]    Generate any preset show by slug, e.g.
-                        bouzid show farmer --play  |  bouzid show news --upload
-                        (flags: --play --upload --no-mix --script-only --air --text)
-  mix [opts]            Mix a voice file with intro/bed/outro (see --help)
-  imaging [opts]        Generate imaging variants for all shows / one show /
-                        one kind with Google (Lyria 3 + Gemini TTS). Each run
-                        ADDS a timestamped variant; the app uses the newest
-                        unless you pin a default.
-                          --show <slug>  --kind intro|outro|bed|transition|sting
-                          --list  --dry-run  --voice <name>
-                          --replace (drop old in scope)  --make-default
-                        (needs a PAID Gemini key)
-  assets <sub>          Manage imaging variants & pinned defaults directly:
-                        list <show> <kind> | resolve <show> <kind> |
-                        set-default <show> <kind> <file> | clear-default ... |
-                        overview
-  library <sub>         Episode library helper (list/air/rename/… for any show,
-                        or 'all' for every show at once)
+—————————————————————————— Music ———————————————————————————
+  fetch [opts]           Download trending Tunisian music from Anghami
+                           $ bouzid fetch                         # all categories
+                           $ bouzid fetch --crate morning
+                           $ bouzid fetch --list                  # show plan
+                           $ bouzid fetch --bg                    # background
+  fetch-status [--watch] Show download progress
+                           $ bouzid fetch-status --watch
+  rescan                 Import library into AzuraCast + apply schedule
+                           $ bouzid rescan
+  music-reset [--dry-run] Make AzuraCast match your local files
+                           $ bouzid music-reset --dry-run         # preview only
+  flush [--dry-run]      Wipe ALL AzuraCast media + Bouzid playlists
+                           $ bouzid flush --dry-run
 
-Station
-  now                   Show what's playing
-  skip                  Skip the current track
-  previous [--back N]   Replay the previously-played track on air now
-                        (N=1 last played, 2 the one before, ...)
-  push-news <file>      Upload a bulletin MP3 to the station
-  breaking [text]       Write an URGENT bulletin and air it immediately
-                        (no text = latest headlines; or pass custom Arabic text)
-  play-now <file|path>  Air a specific clip right now (uploads it if it's a local file)
+—————————————————————————— Imaging & Jingles ———————————————
+  imaging [opts]         Generate station imaging (intro/outro/bed/sting)
+    --show <slug>        Target a specific show
+    --kind <kind>        One of: intro outro bed transition sting
+    --replace            Drop old variants for this scope first
+    --make-default       Pin the new variant as the default
+    --voice <name>       Gemini voice override
+    --list               List what would be generated (dry info)
+                           $ bouzid imaging --show cook --kind intro
+                           $ bouzid imaging --kind sting --replace
+                           $ bouzid imaging --list
+  assets <sub>           Manage imaging variants & pinned defaults
+                           $ bouzid assets overview
+                           $ bouzid assets list cook intro
+                           $ bouzid assets set-default cook intro file.mp3
+                           $ bouzid assets clear-default cook intro
+  use-jingle <file>      Promote a jingle to a show role
+    --for <show>           $ bouzid use-jingle id_x.mp3 --for cook --as intro
+    --as <role>            $ bouzid use-jingle --latest --for station --as bed
+    --latest               $ bouzid use-jingle --list
+    --list                  (role: intro|outro|bed|transition|sting)
 
-Scheduling
-  schedule              Apply the full weekly grid as AzuraCast playlists
-  schedule --dry-run    Preview the plan without changing AzuraCast
-  schedule --reset      Apply after clearing existing Bouzid playlists
-  grid                  Print the weekly grid to the terminal
+—————————————————————————— Studio (TUI) ——————————————————————
+  tui                    Open the full control panel
+                           $ bouzid tui
 
-Info
-  stream-url            Print the public stream URL
-  urls                  Print all admin URLs
-  music-dir             Print the music library path
-  help                  This help
+—————————————————————————— Schedule ————————————————————————
+  schedule [opts]        Apply the weekly grid as AzuraCast playlists
+                           $ bouzid schedule                     # apply
+                           $ bouzid schedule --dry-run           # preview
+                           $ bouzid schedule --reset             # clear + re-apply
+  grid                   Print the weekly programming grid
+                           $ bouzid grid
 
-Maintenance
-  uninstall             Remove containers + volumes (KEEPS your music library)
-  uninstall --purge-music   Also delete the music library in \$MUSIC_DIR
+—————————————————————————— Live Broadcast ——————————————————
+  now                    Show what's currently playing
+                           $ bouzid now
+  skip                   Skip the current track
+                           $ bouzid skip
+  previous [--back N]    Replay a previous track
+                           $ bouzid previous                     # last track
+                           $ bouzid previous --back 2            # 2 tracks ago
+
+—————————————————————————— Voice ———————————————————————————
+  say [text]             Test the current Gemini voice
+                           $ bouzid say "مرحبا بكم"
+                           $ bouzid say                          # default sample
+  voices                 List all available Gemini voices
+                           $ bouzid voices
+
+—————————————————————————— Info & Maintenance ———————————————
+  stream-url             Print the public stream URL
+  urls                   Print all admin URLs
+  music-dir              Print the music library path
+  sync [show]            Two-way sync episodes with AzuraCast
+                           $ bouzid sync all
+                           $ bouzid sync cook
+  reset-assets           Wipe assets/ & rebuild, then rescan
+                           $ bouzid reset-assets
+  uninstall              Remove containers + volumes (keeps music)
+                           $ bouzid uninstall
+                           $ bouzid uninstall --purge-music      # also delete music
+  help / -h / --help     Show this help
+
+—————————————————————————— Quick start ——————————————————————
+  1. bouzid start                  # boot AzuraCast
+  2. bouzid health                 # wait until OK
+  3. bouzid say "مرحبا"            # test your Gemini voice
+   4. bouzid show news --upload     # generate + upload a bulletin
+  5. bouzid tui                    # full control panel
+  6. bouzid schedule               # apply weekly programming
 EOF
 }
 
@@ -146,7 +195,7 @@ case "$cmd" in
   logs)     $DC logs -f --tail=120 ${1:+"$1"};;
   health)
     ok=0
-    checks="${AZURACAST_HTTP_PORT:-80}:AzuraCast ${N8N_PORT:-5678}:n8n"
+    checks="${AZURACAST_HTTP_PORT:-80}:AzuraCast"
     for p in $checks; do
       port="${p%%:*}"; name="${p##*:}"
       if curl -fsS -o /dev/null --max-time 4 "http://localhost:${port}"; then
@@ -209,13 +258,16 @@ case "$cmd" in
   tui)
     PY="python3"; [ -x "$ROOT/.venv/bin/python" ] && PY="$ROOT/.venv/bin/python"
     exec "$PY" scripts/bouzid_tui.py;;
-  news)     ensure_gemini; python3 scripts/show_engine.py --show news "$@";;
-  cook)     ensure_gemini; python3 scripts/show_engine.py --show cook "$@";;
-  sidibouzid|sidi|story) ensure_gemini; python3 scripts/show_engine.py --show sidibouzid "$@";;
   shows|list-shows) python3 scripts/show_engine.py --list;;
   show)
     slug="${1:-}"; shift || true
-    if [ -z "$slug" ]; then c_red "Usage: bouzid show <slug> [--play|--upload|--script-only]"; python3 scripts/show_engine.py --list; exit 1; fi
+    if [ -z "$slug" ]; then
+      c_red "Usage: bouzid show <slug> [opts]"
+      c_blue "  e.g. bouzid show news --upload    bouzid show cook --air"
+      echo
+      python3 scripts/show_engine.py --list
+      exit 1
+    fi
     ensure_gemini; python3 scripts/show_engine.py --show "$slug" "$@";;
   mix)      python3 scripts/audio_mix.py "$@";;
   imaging|reimage|imaging-regen)
@@ -273,6 +325,8 @@ case "$cmd" in
     fi
     python3 scripts/azuracast.py play-now "$dest" "$@" \
       && c_green "ON AIR: $dest";;
+  use-jingle|jingle-as)
+    python3 scripts/use_jingle.py "$@";;
   schedule)
     ensure_api; python3 scripts/azuracast.py apply-schedule "$@";;
   grid)     python3 scripts/build_grid.py >/dev/null && cat weekly_grid.md;;
@@ -282,7 +336,6 @@ case "$cmd" in
     echo "${MUSIC_DIR}";;
   urls)
     echo "AzuraCast : http://localhost:${AZURACAST_HTTP_PORT:-80}"
-    echo "n8n       : http://localhost:${N8N_PORT:-5678}  (${N8N_USER:-admin}/${N8N_PASSWORD:-bouzid2026})"
     echo "Stream    : http://localhost:8000/radio.mp3  (exact mount shown in the AzuraCast UI)"
     echo "Music dir : ${MUSIC_DIR}";;
   uninstall|reset|clean)

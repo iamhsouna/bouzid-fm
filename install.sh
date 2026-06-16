@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # =============================================================================
 #  Bouzid FM 2.0 — one-line installer (Google-only, TUI-first)
-#  Stands up a 24/7 automated Tunisian web/FM radio: AzuraCast + n8n, a yt-dlp
+#  Stands up a 24/7 automated Tunisian web/FM radio: AzuraCast, a yt-dlp
 #  trending-music fetcher, an auto-built weekly schedule, and the `bouzid`
 #  control CLI / TUI. Tested on Ubuntu 24.04 / 26.04.
 #
@@ -146,9 +146,6 @@ else
     || red "pip install failed; run later: pip3 install --break-system-packages -r requirements.txt"
 fi
 
-# Build the n8n bulletin workflow (Google Gemini TTS).
-python3 scripts/build_n8n.py || true
-
 # --- 5) Install the bouzid CLI ---------------------------------------------
 blue "Installing 'bouzid' CLI to /usr/local/bin ..."
 # Install the launcher as a tiny WRAPPER script (NOT a symlink). A symlink to
@@ -170,7 +167,7 @@ if systemctl is-active --quiet nginx 2>/dev/null; then
   sudo systemctl disable --now nginx || true
 fi
 
-blue "Starting the radio stack (AzuraCast + n8n) ..."
+blue "Starting the radio stack (AzuraCast) ..."
 docker compose pull || red "Some images failed to pull; check the output above."
 docker compose up -d
 
@@ -252,9 +249,7 @@ Next steps:
   1. bouzid health                         # confirm all services are up
   2. Put your free Google key in .env:     GEMINI_API_KEY=...   (aistudio.google.com/apikey)
   3. Try it:  bouzid say "مرحبا بكم"   then   bouzid news
-  4. (Optional automation) open n8n at http://localhost:5678 and import
-     n8n/bouzid-news-google-tts.json, set GEMINI_API_KEY there, and Activate it.
-  5. Tune music sources any time in config/crates.json, then: bouzid fetch --bg
+   4. Tune music sources any time in config/crates.json, then: bouzid fetch --bg
 
 Updating later:
   • Just `git pull` in this folder — no need to re-run install.sh.

@@ -55,11 +55,11 @@ shows a duration. If you get a key error, re-check step 0.
 
 ```bash
 bouzid start
-bouzid health        # repeat until AzuraCast + n8n both say OK (first boot ~2 min)
-bouzid urls          # prints the AzuraCast / n8n / stream URLs
+bouzid health        # repeat until AzuraCast says OK (first boot ~2 min)
+bouzid urls          # prints the AzuraCast / stream URLs
 ```
 
-**Good:** `bouzid health` reports `OK AzuraCast` and `OK n8n`.
+**Good:** `bouzid health` reports `OK AzuraCast`.
 
 ## 4. The TUI (the main way to use it)
 

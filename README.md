@@ -24,7 +24,7 @@ through AzuraCast — all from one clean terminal control panel.
   `shows/*.json`.
 - **Music** — fetches trending Tunisian tracks and schedules a full week of
   programming in AzuraCast.
-- **Automation** — an n8n workflow can produce bulletins on a timer.
+- **Automation** — a cron job can produce bulletins on a timer (`bouzid news --upload`).
 
 ## Requirements
 
@@ -120,12 +120,11 @@ The important keys (see `.env.example` for everything):
 
 ```
 bin/bouzid            the control CLI (and `bouzid tui` launcher)
-scripts/              all the Python (TUI, generators, AzuraCast, n8n, mixing)
+scripts/              all the Python (TUI, generators, AzuraCast, mixing)
 assets/<show>/        mastered imaging, one folder per show + kind:
                       intro/ outro/ bed/ transition/ sting/
 shows/                preset show definitions (*.json)
-n8n/                  the Gemini bulletin workflow
-docker-compose.yml    the AzuraCast + n8n stack
+docker-compose.yml    the AzuraCast stack
 ```
 
 See `TUTORIAL.md` for a guided first run and `TESTING.md` for a full checklist.

@@ -29,7 +29,7 @@ Then:
 ./install.sh
 ```
 
-This builds a Python venv, starts the Docker stack (AzuraCast + n8n) and installs
+This builds a Python venv, starts the Docker stack (AzuraCast) and installs
 the `bouzid` command.
 
 ## 2. Open the control panel
@@ -46,7 +46,7 @@ there. `Ctrl+L` clears it, `q` quits.
 ## 3. Bring the stack up
 
 On **Dashboard**, press **Start stack**, wait a few seconds, then **Health**.
-You want both AzuraCast and n8n reporting OK. (First-ever boot of AzuraCast
+You want AzuraCast reporting OK. (First-ever boot of AzuraCast
 takes a couple of minutes while it initializes.)
 
 ## 4. Confirm your voice
@@ -91,7 +91,8 @@ That's it — you have a live, self-programming Tunisian AI station.
 
 ## Tip: automate the news
 
-The stack ships an n8n workflow (`n8n/bouzid-news-google-tts.json`). Open n8n at
-http://localhost:5678 (admin / bouzid2026), import the workflow, set
-`GEMINI_API_KEY` in n8n's environment, and activate it to produce bulletins on
-a timer.
+Add a cron job to generate news on a timer:
+```bash
+crontab -e
+# add:  0 */6 * * * cd ~/bouzid-fm && bouzid news --upload
+```

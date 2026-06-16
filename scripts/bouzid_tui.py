@@ -87,6 +87,35 @@ def _imaging_shows():
         return ["station"]
 
 
+# Audio extensions recognised as jingles (matches make_jingle / use_jingle).
+_JINGLE_EXTS = (".mp3", ".m4a", ".aac", ".ogg", ".oga", ".opus",
+                ".flac", ".wav", ".wma")
+
+
+def _jingle_pool_dir():
+    """The flat jingle pool (matches make_jingle.jingles_dir / use_jingle)."""
+    md = env_get("MUSIC_DIR", os.path.join(ROOT, "music"))
+    md = os.path.expanduser(os.path.expandvars(md))
+    if not os.path.isabs(md):
+        md = os.path.join(ROOT, md)
+    return os.path.join(md, "jingles")
+
+
+def _jingle_pool_names():
+    """Newest-first list of jingle basenames in the pool (for the picker)."""
+    d = _jingle_pool_dir()
+    if not os.path.isdir(d):
+        return []
+    entries = []
+    for base, _dirs, names in os.walk(d):
+        for n in names:
+            if n.lower().endswith(_JINGLE_EXTS) and not n.startswith("."):
+                p = os.path.join(base, n)
+                entries.append((os.path.getmtime(p), n))
+    entries.sort(reverse=True)  # newest first
+    return [name for _t, name in entries]
+
+
 IMAGING_SHOWS = _imaging_shows()
 # Imaging kinds the generator + resolver understand.
 IMAGING_KINDS = ["intro", "outro", "bed", "transition", "sting"]
@@ -447,10 +476,27 @@ class BouzidApp(App):
             yield Input(placeholder="morning_id (auto-named if blank)\u2026",
                         id="jingle-name")
             with Horizontal(classes="row"):
-                yield Button("\U0001F39b Generate jingle", id="jingle-gen",
+                yield Button("\U0001F39B Generate jingle", id="jingle-gen",
                              variant="success")
                 yield Button("Generate + air", id="jingle-air",
                              variant="warning")
+            yield Static("Promote a jingle to a show role — pick the jingle "
+                         "from the pool, then the target show + role.",
+                         classes="hint")
+            yield Label("Jingle from the pool")
+            yield Select([("(no jingles yet \u2014 generate one above)", "")]
+                         + [(name, name) for name in _jingle_pool_names()],
+                         id="jingle-use-pick", allow_blank=False)
+            yield Label("Target show")
+            yield Select([(s, s) for s in IMAGING_SHOWS], id="jingle-use-show",
+                         value=IMAGING_SHOWS[0], allow_blank=False)
+            yield Label("Role")
+            yield Select([(k, k) for k in IMAGING_KINDS], id="jingle-use-role",
+                         value=IMAGING_KINDS[0], allow_blank=False)
+            with Horizontal(classes="row"):
+                yield Button("\U0001F517 Use as\u2026", id="jingle-use",
+                             variant="primary")
+                yield Button("\u21bb Refresh pool", id="jingle-refresh")
 
     # ---- Music ----------------------------------------------------------- #
     def _music_tab(self):
@@ -947,6 +993,33 @@ class BouzidApp(App):
         label = "Generating %s jingle%s" % (mode, " + airing" if air else "")
         return self.run_cmd(args, label, on_done=self._lib_refresh)
 
+    def _jingle_use(self):
+        """Promote the selected jingle in the pool to a chosen show's role.
+
+        Reads the jingle picker, the target show picker, and the role picker,
+        then shells out to use_jingle.py which copies the jingle into
+        assets/<show>/<role>/ and pins it as the default.
+        """
+        pick = self.query_one("#jingle-use-pick", Select).value
+        show = self.query_one("#jingle-use-show", Select).value
+        role = self.query_one("#jingle-use-role", Select).value
+        if pick in (None, Select.BLANK, ""):
+            return self.log_line("  \u2717 pick a jingle from the pool first")
+        if show in (None, Select.BLANK) or role in (None, Select.BLANK):
+            return self.log_line("  \u2717 pick a target show and role first")
+        args = self.py("use_jingle.py", str(pick), "--for", str(show),
+                       "--as", str(role))
+        return self.run_cmd(args,
+                            "Promoting %s to %s / %s" % (pick, show, role))
+
+    def _jingle_refresh(self):
+        """Rebuild the jingle pool selector with current pool files."""
+        names = _jingle_pool_names()
+        opts = [("(no jingles yet \u2014 generate one above)", "")]
+        opts += [(n, n) for n in names]
+        self.query_one("#jingle-use-pick", Select).set_options(opts)
+        self.log_line("  \u21bb pool refreshed: %d jingle(s)" % len(names))
+
     # ===================================================================== #
     #  logging / workers
     # ===================================================================== #
@@ -1163,6 +1236,10 @@ class BouzidApp(App):
             return self._jingle_draft()
         if bid in ("jingle-gen", "jingle-air"):
             return self._jingle_generate(air=(bid == "jingle-air"))
+        if bid == "jingle-use":
+            return self._jingle_use()
+        if bid == "jingle-refresh":
+            return self._jingle_refresh()
 
         # Dashboard
         if bid == "dash-start":

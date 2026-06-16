@@ -1,7 +1,7 @@
-# Bouzid FM 2.0 — the radio stack (AzuraCast + n8n)
+# Bouzid FM 2.0 — the radio stack (AzuraCast only)
 #
 # AzuraCast ships as an all-in-one image (web UI + REST API + Icecast/Shoutcast
-# + Liquidsoap AutoDJ + database). This is the only stack Bouzid FM uses.
+# + Liquidsoap AutoDJ + database).
 #
 #   docker compose up -d
 #
@@ -12,8 +12,6 @@
 #   4. Your music library (\$MUSIC_DIR, in your home directory) is mounted
 #      read-only at /var/azuracast/imports — `bouzid rescan` imports it via the
 #      API, or use "Import" in the UI.
-#
-# Content generation is Google-only: the n8n service just needs GEMINI_API_KEY.
 #
 # Pin the Compose project name so volume names are ALWAYS the same, no matter
 # which folder you run from. This is what makes AzuraCast's database (admin
@@ -53,38 +51,8 @@ services:
       - MYSQL_PASSWORD=azur4c457
       - MYSQL_RANDOM_ROOT_PASSWORD=yes
 
-  # --- n8n: the automation brain (scheduled news bulletins) ---------------
-  n8n:
-    image: n8nio/n8n:latest
-    restart: unless-stopped
-    ports:
-      - "${N8N_PORT:-5678}:5678"
-    environment:
-      - N8N_BASIC_AUTH_ACTIVE=true
-      - N8N_BASIC_AUTH_USER=${N8N_USER:-admin}
-      - N8N_BASIC_AUTH_PASSWORD=${N8N_PASSWORD:-bouzid2026}
-      - GENERIC_TIMEZONE=${TZ:-Africa/Tunis}
-      - N8N_SECURE_COOKIE=false
-      # Google Gemini is the only content provider — text + speech.
-      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
-      - GEMINI_TEXT_MODEL=${GEMINI_TEXT_MODEL:-gemini-3.5-flash}
-      - GEMINI_TTS_MODEL=${GEMINI_TTS_MODEL:-gemini-3.1-flash-tts-preview}
-      - GEMINI_TTS_VOICE=${GEMINI_TTS_VOICE:-Kore}
-      # reach AzuraCast over the shared compose network by service name
-      - AZURACAST_URL=http://azuracast
-      - AZURACAST_API_KEY=${AZURACAST_API_KEY:-}
-      - AZURACAST_STATION=${AZURACAST_STATION:-bouzid}
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    volumes:
-      # named volume (not a host bind mount) so a clean uninstall never leaves
-      # root-owned files in the repo. Removed by: bouzid uninstall  (down -v)
-      - n8n_data:/home/node/.n8n
-      - ${MUSIC_DIR:-./music}:/music
-
 volumes:
   azuracast_db:
   azuracast_station_data:
   azuracast_uploads:
   azuracast_backups:
-  n8n_data:

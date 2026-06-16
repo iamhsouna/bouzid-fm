@@ -20,9 +20,8 @@ the codebase.
   their env vars, TUI fields, and the XTTS Docker service / local compose file.
 - Removed: jingle builder and synthesized imaging.
 - Rewritten Google-only: `make_bulletin.py`, `tts_engine.py`, `show_engine.py`,
-  `make_cook.py`, `make_sidibouzid.py`, `build_n8n.py`, `bin/bouzid`,
+  `make_cook.py`, `make_sidibouzid.py`, `bin/bouzid`,
   `bouzid_tui.py`.
-- n8n: a single Google-TTS workflow (`n8n/bouzid-news-google-tts.json`).
 
 ## Defaults
 - Text model: `gemini-3.5-flash`
@@ -33,14 +32,13 @@ the codebase.
 ## Features carried over
 News bulletins, breaking-news flash, Cook with Eya, Story of Sidi Bouzid,
 generic preset show engine + presets, AzuraCast upload, weekly scheduling,
-n8n automation, Docker stack, trending-music fetch + rescan.
+Docker stack, trending-music fetch + rescan.
 
 ## Layout
 ```
 bin/bouzid            control CLI + TUI launcher
-scripts/              TUI + generators + AzuraCast/n8n/mixing helpers
+scripts/              TUI + generators + AzuraCast/mixing helpers
 assets/<show>/        mastered imaging (intro/outro/beds/transition)
 shows/                preset show JSON
-n8n/                  Gemini bulletin workflow
-docker-compose.yml    AzuraCast + n8n
+docker-compose.yml    AzuraCast stack
 ```
