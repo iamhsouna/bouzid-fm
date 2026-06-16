@@ -16,8 +16,9 @@ and an optional 'override' you can set from the Music tab (or with --set).
 
 Progress is written to data/fetch-status.json in the SAME shape used by the
 old fetcher, so `bouzid fetch-status` / the Music tab status button keep
-working. Already-downloaded tracks are skipped via a yt-dlp download archive,
-so re-running tops a crate up instead of re-downloading.
+working. A track is skipped only when its tidy file is already present on
+disk, so re-running tops a crate up instead of re-downloading -- and anything
+missing always comes back (no reliance on a stale yt-dlp download archive).
 
 No Python deps - shells out to the `yt-dlp` (and `ffmpeg`) binaries.
 
@@ -227,18 +228,26 @@ def clean_track_name(song_name, artist, maxlen=70):
     return name or "track"
 
 
-def ytdlp_cmd(song_name, artist, outdir, q, archive):
+def dest_path(outdir, song_name, artist):
+    """The deterministic, tidy MP3 path a track will be saved to."""
+    return os.path.join(outdir, clean_track_name(song_name, artist) + ".mp3")
+
+
+def ytdlp_cmd(song_name, artist, outdir, q):
     query = ("%s %s" % (song_name, artist)).strip()
     # Name the saved file from the clean Anghami metadata, not the messy YT
     # title, and don't clobber an existing file with the same tidy name.
     outname = clean_track_name(song_name, artist) + ".%(ext)s"
+    # NOTE: deliberately NO --download-archive. The archive lived in the music
+    # library (which survives reinstalls) and would skip tracks as "already
+    # recorded" even after their files were wiped. We gate on real on-disk
+    # presence instead (see download_song / the main loop).
     return [
         "yt-dlp",
         "--ignore-errors", "--no-warnings", "--newline",
         "--no-playlist",
         "--extract-audio", "--audio-format", "mp3", "--audio-quality", q,
         "--embed-thumbnail", "--add-metadata", "--embed-metadata",
-        "--download-archive", archive,
         "--match-filter", "!is_live",
         "--retries", "3",
         "--no-overwrites",
@@ -248,9 +257,9 @@ def ytdlp_cmd(song_name, artist, outdir, q, archive):
     ]
 
 
-def download_song(song_name, artist, outdir, q, archive, status, quiet):
-    cmd = ytdlp_cmd(song_name, artist, outdir, q, archive)
-    got = False
+def download_song(song_name, artist, outdir, q, status, quiet):
+    dest = dest_path(outdir, song_name, artist)
+    cmd = ytdlp_cmd(song_name, artist, outdir, q)
     try:
         proc = subprocess.Popen(
             cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
@@ -259,14 +268,16 @@ def download_song(song_name, artist, outdir, q, archive, status, quiet):
         sys.exit("yt-dlp not found. Install it (the installer does this).")
     for raw in proc.stdout:
         line = raw.rstrip("\n")
-        if "[ExtractAudio] Destination:" in line:
-            got = True
-            status["tracks_done"] += 1
-            write_status(status)
-            render(status)
         if not quiet:
             print(line, flush=True)
     proc.wait()
+    # Success is decided by whether the tidy file is actually on disk now -
+    # not by parsing yt-dlp output and not by a stale download archive.
+    got = os.path.exists(dest)
+    if got:
+        status["tracks_done"] += 1
+        write_status(status)
+        render(status)
     return got
 
 
@@ -290,41 +301,27 @@ def rescan_library():
             pass
 
 
-def prune_archive(archive, ids):
-    """Remove the given video ids from the yt-dlp download archive so a cleared
-    crate can be re-fetched cleanly."""
-    if not ids or not os.path.exists(archive):
-        return
-    try:
-        with open(archive, encoding="utf-8") as f:
-            lines = f.readlines()
-        keep = [ln for ln in lines
-                if not any(vid and vid in ln for vid in ids)]
-        with open(archive, "w", encoding="utf-8") as f:
-            f.writelines(keep)
-    except Exception:  # noqa: BLE001
-        pass
-
-
 def clear_crate(crate, md):
-    """Delete the MP3s in one crate folder and prune their archive entries.
-    Returns the number of files removed."""
+    """Delete the MP3s in one crate folder. Returns the number of files removed.
+    Also drops the legacy yt-dlp download archive if present (it is no longer
+    used, but old installs may still have one lying around)."""
     outdir = os.path.join(md, crate)
     if not os.path.isdir(outdir):
         print("Nothing to clear: %s does not exist." % outdir)
         return 0
     mp3s = glob.glob(os.path.join(outdir, "*.mp3"))
-    ids = []
-    for p in mp3s:
-        m = re.search(r"\[([^\[\]]+)\]\.mp3$", os.path.basename(p))
-        if m:
-            ids.append(m.group(1))
     for p in mp3s:
         try:
             os.remove(p)
         except OSError:
             pass
-    prune_archive(os.path.join(md, ".archive.txt"), ids)
+    # Best-effort cleanup of the obsolete archive so nothing stale lingers.
+    legacy_archive = os.path.join(md, ".archive.txt")
+    try:
+        if os.path.exists(legacy_archive):
+            os.remove(legacy_archive)
+    except OSError:
+        pass
     print("Cleared %d track(s) from %s/" % (len(mp3s), crate))
     return len(mp3s)
 
@@ -453,7 +450,6 @@ def main():
         print("Nothing to download.")
         return
 
-    archive = os.path.join(md, ".archive.txt")
     status = {
         "pid": os.getpid(),
         "started_at": time.time(),
@@ -491,9 +487,17 @@ def main():
                   % ("%s %s" % (item["name"], item["artist"])).strip())
             continue
         outdir = os.path.join(md, item["crate"])
+        # Skip only when the tidy file is REALLY on disk - this is what makes
+        # "top up" work without re-downloading, while never skipping a track
+        # whose file is missing (the old stale-archive bug).
+        dest = dest_path(outdir, item["name"], item["artist"])
+        if os.path.exists(dest):
+            if not args.quiet:
+                print("   already in library -> %s" % os.path.basename(dest))
+            continue
         try:
             ok = download_song(item["name"], item["artist"], outdir, q,
-                               archive, status, args.quiet)
+                               status, args.quiet)
         except KeyboardInterrupt:
             status["finished"] = True
             status["interrupted"] = True

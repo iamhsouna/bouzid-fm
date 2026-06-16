@@ -3,6 +3,18 @@
 All notable changes to the 2.0 line. This is a clean rewrite of Bouzid FM:
 Google-only, TUI-first, with the real mastered station imaging.
 
+## 1.2.2 (2026-06-16)
+
+- **Music fetch no longer skips most of a playlist.** The fetcher used a
+  yt-dlp *download archive* to remember every track it had ever downloaded —
+  but that archive lives in your music library (which survives reinstalls), so
+  after a fresh install it still listed hundreds of old YouTube IDs and skipped
+  them with "already recorded in the archive" even though the MP3s were gone.
+  The result was lines like "3/45 tracks ok". Now a track is skipped **only when
+  its tidy file is actually present on disk**, so fetching always tops a crate
+  up to the full playlist and re-downloads anything missing. The obsolete
+  `.archive.txt` is no longer used (and is cleaned up when you Clear a category).
+
 ## 1.2.1 (2026-06-16)
 
 - **"Air now" works every time now**, not just once. Two fixes: (1) airing no
