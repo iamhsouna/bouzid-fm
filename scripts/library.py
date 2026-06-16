@@ -283,12 +283,28 @@ def air(slug, path):
     import azuracast
     ac = azuracast.AzuraCast()
     dest = dest_folder(slug).rstrip("/") + "/" + os.path.basename(path)
-    print("uploading", os.path.basename(path), "->", dest, "...")
+    base = os.path.basename(path)
+    # Airing must work every time, including for tracks already imported into
+    # AzuraCast (every music-pool song was added by the rescan). Upload only if
+    # the file is missing, and never abort just because it is already there --
+    # reuse the existing copy. This is what fixes "Air now works only once".
+    existing = None
     try:
-        print(json.dumps(ac.upload(path, dest), ensure_ascii=False)[:200])
-    except Exception as e:  # noqa: BLE001
-        print("✗ upload failed:", e)
-        return 1
+        existing = ac.find_file(dest) or ac.find_file(base)
+    except Exception:  # noqa: BLE001
+        existing = None
+    if existing:
+        print("already in library ->", existing.get("path") or dest)
+    else:
+        print("uploading", base, "->", dest, "...")
+        try:
+            print(json.dumps(ac.upload(path, dest), ensure_ascii=False)[:200])
+        except Exception as e:  # noqa: BLE001
+            if ac.find_file(dest) or ac.find_file(base):
+                print("  (already present -- reusing the library copy)")
+            else:
+                print("✗ upload failed:", e)
+                return 1
     try:
         res = ac.play_now(dest)
         print(json.dumps(res, ensure_ascii=False)[:300])

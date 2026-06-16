@@ -3,6 +3,22 @@
 All notable changes to the 2.0 line. This is a clean rewrite of Bouzid FM:
 Google-only, TUI-first, with the real mastered station imaging.
 
+## 1.2.1 (2026-06-16)
+
+- **"Air now" works every time now**, not just once. Two fixes: (1) airing no
+  longer re-uploads a track that is already in the AzuraCast library (every
+  music-pool song is already imported), so it stops bailing out with an upload
+  error; and (2) the cut-in has a reliable fallback -- if the interrupting
+  queue is still busy with the previous cut-in, the clip is queued as a normal
+  request and the track boundary is forced, so a second press (or a different
+  song) always goes on air.
+- **Tidy, archive-friendly music file names.** Downloads are now named from the
+  clean Anghami artist + title (e.g. `Cut Off - Escuro.mp3`,
+  `DNDM - Let's Fly.mp3`) instead of the long, messy YouTube video title with
+  the `[videoID]` suffix and stray `|` characters. Names are de-noised
+  (drops "(Official Video)", "[HD]", bracketed ids), trimmed to a sane length,
+  and existing files are never clobbered.
+
 ## 1.1.5 (2026-06-16)
 
 - The **app version is now always shown** — in the footer line (bottom-right,

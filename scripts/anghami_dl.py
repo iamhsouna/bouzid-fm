@@ -205,8 +205,33 @@ def render(status):
 # ----------------------------------------------------------------------- #
 #  Downloading
 # ----------------------------------------------------------------------- #
+def clean_track_name(song_name, artist, maxlen=70):
+    """Build a tidy, archive-friendly file name from the clean Anghami metadata
+    (artist + title) instead of the noisy YouTube video title. Turns names like
+    "Balti - Ya Lili (Official Music Video) || HD [dQw4w9WgXcQ].mp3" into a neat
+    "Balti - Ya Lili.mp3"."""
+    artist = (artist or "").strip()
+    song = (song_name or "").strip()
+    name = ("%s - %s" % (artist, song)) if (artist and song) else (artist or song or "track")
+    # Drop bracketed noise like "(Official Video)", "[HD]", "[videoid]".
+    name = re.sub(r"[\(\[\{][^)\]\}]*"
+                  r"(official|video|audio|lyric|clip|hd|4k|mv|remaster|prod)"
+                  r"[^)\]\}]*[\)\]\}]", "", name, flags=re.I)
+    # Strip leftover bracket groups (e.g. a bare "[K5M574HCTRM]" video id).
+    name = re.sub(r"[\(\[\{][^)\]\}]*[\)\]\}]", "", name)
+    # Replace characters that are unsafe or ugly in file names.
+    name = re.sub(r"[\\/:*?\"<>|\uFF5C\[\]\{\}\u3010\u3011]+", " ", name)
+    name = re.sub(r"\s+", " ", name).strip(" .-_")
+    if len(name) > maxlen:
+        name = name[:maxlen].rstrip(" .-_")
+    return name or "track"
+
+
 def ytdlp_cmd(song_name, artist, outdir, q, archive):
     query = ("%s %s" % (song_name, artist)).strip()
+    # Name the saved file from the clean Anghami metadata, not the messy YT
+    # title, and don't clobber an existing file with the same tidy name.
+    outname = clean_track_name(song_name, artist) + ".%(ext)s"
     return [
         "yt-dlp",
         "--ignore-errors", "--no-warnings", "--newline",
@@ -216,8 +241,9 @@ def ytdlp_cmd(song_name, artist, outdir, q, archive):
         "--download-archive", archive,
         "--match-filter", "!is_live",
         "--retries", "3",
+        "--no-overwrites",
         "--postprocessor-args", "ffmpeg:-ar 44100 -ac 2",
-        "-o", os.path.join(outdir, "%(title).80s [%(id)s].%(ext)s"),
+        "-o", os.path.join(outdir, outname),
         "ytsearch1:%s" % query,
     ]
 

@@ -347,20 +347,20 @@ class AzuraCast:
 
         AzuraCast's Liquidsoap configuration defines two request queues:
 
-            requests              = request.queue(id="requests", ...)
+            requests              = request.queue(id=\"requests\", ...)
             radio = fallback(track_sensitive=true,  [requests, radio])
 
-            interrupting_requests = request.queue(id="interrupting_requests", ...)
+            interrupting_requests = request.queue(id=\"interrupting_requests\", ...)
             radio = fallback(track_sensitive=false, [interrupting_requests, radio])
 
         A normal song request lands in `requests`, which is track-sensitive and
         sits behind general rotation, so it only swaps in at the NEXT track
-        boundary (this is the "it just plays the next song" symptom).
+        boundary (this is the \"it just plays the next song\" symptom).
 
         The `interrupting_requests` queue is track_sensitive=false, so anything
         pushed to it cuts into the current song instantly. We push the clip
         there via the backend telnet command — the same path AzuraCast's own
-        "interrupt" playlists use. No song-request, no skip, no queue juggling,
+        \"interrupt\" playlists use. No song-request, no skip, no queue juggling,
         and the clip is never added to rotation, so it can't re-air.
 
         `do_skip`/`keep` are kept only for CLI backwards-compatibility.
@@ -378,24 +378,40 @@ class AzuraCast:
         rel = (f.get("path") or remote_path).lstrip("/")
         abs_path = "%s/%s" % (self.media_root(), rel)
         print("  cutting in on air now (interrupting queue) ...")
+        resp = None
+        reply = ""
         try:
             resp = self.telnet("interrupting_requests.push %s" % abs_path)
+            reply = self._telnet_response(resp)
         except RuntimeError as e:
-            raise RuntimeError(
-                "Could not reach the station backend to force the clip on air "
-                "(%s). Confirm the admin API key has full administrator "
-                "permissions." % str(e)[:160])
-        # Liquidsoap replies to `<queue>.push` with the new request id (a bare
-        # integer) the moment the clip is accepted onto the interrupting queue.
-        # That is the authoritative success signal. The public now-playing feed
-        # does NOT reflect interrupting-queue tracks (same as jingles), so we
-        # use it only as best-effort extra confirmation and never fail on it.
-        reply = self._telnet_response(resp)
+            resp = {"error": str(e)[:200]}
+        # A bare-integer reply is Liquidsoap confirming the push was accepted.
         accepted = reply.isdigit()
-        confirmed = self.wait_until_airing(base, timeout=8) if accepted else False
+        # The public now-playing feed does not reflect interrupting-queue
+        # tracks right away, so this is best-effort confirmation only.
+        confirmed = self.wait_until_airing(base, timeout=8)
+        # Fallback that makes repeat airs reliable: if the interrupting queue
+        # did NOT take the clip (it can stay busy with the previous cut-in --
+        # this is exactly why \"Air now\" used to work only once), queue the clip
+        # as a normal request and force the track boundary so it STILL airs.
+        if not accepted and not confirmed:
+            try:
+                resp = self.telnet("requests.push %s" % abs_path)
+                reply = self._telnet_response(resp) or reply
+                self.skip()
+                accepted = reply.isdigit()
+                confirmed = self.wait_until_airing(base, timeout=12)
+            except RuntimeError:
+                pass
+        on_air = accepted or confirmed
+        if not on_air:
+            raise RuntimeError(
+                "Pushed the clip to the backend but could not confirm it cut "
+                "on air. Confirm the admin API key has full administrator "
+                "permissions.")
         return {"airing": base, "method": "interrupting_queue",
                 "media_path": abs_path, "queued": accepted,
-                "request_id": reply or None, "on_air": accepted,
+                "request_id": reply or None, "on_air": on_air,
                 "confirmed_now_playing": confirmed,
                 "backend_response": resp}
 
