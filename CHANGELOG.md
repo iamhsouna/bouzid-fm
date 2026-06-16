@@ -3,6 +3,16 @@
 All notable changes to the 2.0 line. This is a clean rewrite of Bouzid FM:
 Google-only, TUI-first, with the real mastered station imaging.
 
+## 1.2.6 (2026-06-16)
+
+- **`bouzid music-reset` now shows live progress — it was never hanging.** The
+  previous version printed nothing while it walked your local music and fetched
+  AzuraCast's full media list (a normal, but slow, first step on a big library),
+  so it looked frozen. It now prints a timestamped line for every phase
+  (scanning local, connecting, fetching the media list, each orphan removed as
+  `[i/N]`, import, reschedule, restart) and flushes output immediately, so you
+  can always see exactly what it is doing.
+
 ## 1.2.5 (2026-06-16)
 
 - **Fixed for good: `bouzid` no longer dies with "Permission denied" after a

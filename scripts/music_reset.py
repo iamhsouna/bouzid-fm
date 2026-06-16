@@ -12,6 +12,9 @@ the weekly schedule so only your current downloaded music is on air.
 It ONLY touches the music crate folders. News, Jingles, Cook and other show
 folders are left completely alone.
 
+Every phase prints a timestamped line so you can always see what it is doing —
+fetching AzuraCast's full media list is the slow, but normal, first step.
+
 Usage:
     python3 scripts/music_reset.py            # reconcile + re-import + reschedule
     python3 scripts/music_reset.py --dry-run  # just list what would be removed
@@ -21,6 +24,13 @@ import argparse
 import importlib.util
 import os
 import sys
+import time
+
+# Stream output immediately so you always see progress (no silent hang).
+try:
+    sys.stdout.reconfigure(line_buffering=True)
+except Exception:  # noqa: BLE001
+    pass
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
@@ -30,6 +40,16 @@ import azuracast  # noqa: E402
 
 AUDIO_EXTS = (".mp3", ".m4a", ".aac", ".ogg", ".oga", ".opus",
               ".flac", ".wav", ".wma")
+
+_T0 = time.monotonic()
+
+
+def log(msg=""):
+    print(msg, flush=True)
+
+
+def step(msg):
+    print("[%6.1fs] %s" % (time.monotonic() - _T0, msg), flush=True)
 
 
 def _env(key, default=""):
@@ -104,14 +124,22 @@ def main():
 
     root = music_root()
     crates = crate_folders()
-    ac = azuracast.AzuraCast()
+    step("Music library : %s" % root)
+    step("Crates        : %s" % ", ".join(sorted(crates)))
 
+    step("Scanning your local music ...")
+    local = local_relpaths(root, crates)
+    step("Local tracks  : %d" % len(local))
+
+    step("Connecting to AzuraCast ...")
+    ac = azuracast.AzuraCast()
+    step("Fetching the AzuraCast media list (normal slow step on big libraries) ...")
     try:
         remote = ac.files()
     except RuntimeError as e:
         sys.exit("Cannot reach AzuraCast: %s" % e)
+    step("AzuraCast has : %d media file(s) total" % len(remote))
 
-    local = local_relpaths(root, crates)
     orphans = []
     for f in remote:
         rp = (f.get("path") or "").lstrip("/")
@@ -120,51 +148,52 @@ def main():
         top = rp.split("/")[0].lower()
         if top in crates and rp.lower() not in local:
             orphans.append(f)
-
-    print("Music library : %s" % root)
-    print("Local tracks  : %d  (crates: %s)"
-          % (len(local), ", ".join(sorted(crates))))
-    print("Orphans found : %d AzuraCast music track(s) not in your library"
-          % len(orphans))
+    step("Orphans       : %d music track(s) in AzuraCast but not in your library"
+         % len(orphans))
 
     if args.dry_run:
         for f in orphans:
-            print("  would remove:", f.get("path"))
-        print("\n(dry-run — nothing was changed)")
+            log("  would remove: %s" % f.get("path"))
+        step("dry-run complete — nothing was changed.")
         return 0
 
-    removed = failed = 0
-    for f in orphans:
-        fid = f.get("id")
-        if fid is None:
-            continue
-        try:
-            ac.delete_file(fid)
-            removed += 1
-            print("  ✗ removed", f.get("path"))
-        except RuntimeError as e:
-            failed += 1
-            print("  ⚠ could not remove %s (%s)"
-                  % (f.get("path"), str(e)[:120]))
-    print("Removed %d orphan(s), %d failed." % (removed, failed))
+    if not orphans:
+        step("Nothing to remove.")
+    else:
+        n = len(orphans)
+        removed = failed = 0
+        for i, f in enumerate(orphans, 1):
+            fid = f.get("id")
+            if fid is None:
+                continue
+            try:
+                ac.delete_file(fid)
+                removed += 1
+                log("  [%d/%d] ✗ removed %s" % (i, n, f.get("path")))
+            except RuntimeError as e:
+                failed += 1
+                log("  [%d/%d] ⚠ could not remove %s (%s)"
+                    % (i, n, f.get("path"), str(e)[:120]))
+        step("Removed %d orphan(s), %d failed." % (removed, failed))
 
     if not args.no_import:
-        print("\nImporting current local music ...")
+        step("Importing any new local tracks ...")
         try:
             ac.import_dir(root)
         except RuntimeError as e:
-            print("⚠ import failed:", e)
+            log("⚠ import failed: %s" % e)
 
     if not args.no_schedule:
-        print("\nRe-applying the weekly schedule ...")
+        step("Re-applying the weekly schedule ...")
         try:
             ac.apply_schedule(reset=True)
+            step("Restarting broadcasting so changes go live ...")
             ac.restart_broadcasting()
         except RuntimeError as e:
-            print("⚠ schedule/restart failed:", e)
+            log("⚠ schedule/restart failed: %s" % e)
 
-    print("\nDone. AzuraCast now uses only your downloaded music. "
-          "Check with: bouzid now")
+    step("Done. AzuraCast now uses only your downloaded music. "
+         "Check with: bouzid now")
     return 0
 
 
