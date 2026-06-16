@@ -1,0 +1,28 @@
+{
+  "slug": "proverb",
+  "name": "مثل اليوم",
+  "emoji": "🧠",
+  "desc": "A Tunisian proverb, its meaning, and a little story.",
+  "length_min": 1,
+  "upload_folder": "Proverb",
+  "mix": {
+    "intro": false,
+    "outro": false,
+    "bed": true,
+    "transition": false
+  },
+  "markers": [
+    {
+      "id": "مثل",
+      "display": "🧠 مثل اليوم"
+    }
+  ],
+  "prompt": "إنت راوي في إذاعة بوزيد إف إم. بالدارجة التونسية، قدّم مثلاً تونسياً شعبياً واحداً، اشرح معناه وفي أي وقت يتقال، وزيد حكاية صغيرة طريفة تخلّيه يعلق في البال. حوالي دقيقة.",
+  "fallback": [
+    {
+      "id": "مثل",
+      "text": "مثل اليوم يقول: «اللي فات مات». معناه بلّي اللي فات خلّيه واركّز على اليوم وغدوة. تونس عندها حكمة في كل كلمة!"
+    }
+  ],
+  "title_en": "Proverb of the Day"
+}

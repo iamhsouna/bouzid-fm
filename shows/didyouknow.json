@@ -1,0 +1,28 @@
+{
+  "slug": "didyouknow",
+  "name": "هل تعلم؟",
+  "emoji": "💡",
+  "desc": "A short, surprising 'did you know' fact.",
+  "length_min": 1,
+  "upload_folder": "DidYouKnow",
+  "mix": {
+    "intro": false,
+    "outro": false,
+    "bed": true,
+    "transition": false
+  },
+  "markers": [
+    {
+      "id": "حقيقة",
+      "display": "💡 هل تعلم؟"
+    }
+  ],
+  "prompt": "إنت مقدّم فقرة «هل تعلم؟» في إذاعة بوزيد إف إم. بالدارجة التونسية، قدّم معلومة قصيرة ومثيرة (علم، تاريخ، تونس، طبيعة) في جملتين أو ثلاثة. المعلومة لازم تكون صحيحة ودقيقة.",
+  "fallback": [
+    {
+      "id": "حقيقة",
+      "text": "هل تعلم؟ أن تونس فيها أكثر من ثمانية مواقع مصنّفة على قائمة التراث العالمي لليونسكو؟ بلادنا صغيرة أمّا تاريخها كبير ياسر!"
+    }
+  ],
+  "title_en": "Did You Know?"
+}

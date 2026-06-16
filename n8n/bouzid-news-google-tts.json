@@ -1,0 +1,383 @@
+{
+  "name": "Bouzid FM — News (Google TTS)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 6
+            }
+          ]
+        }
+      },
+      "name": "Every 6h",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [
+        80,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://www.babnet.net/feed.php"
+      },
+      "name": "RSS 1",
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1,
+      "position": [
+        320,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://www.mosaiquefm.net/ar/rss"
+      },
+      "name": "RSS 2",
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1,
+      "position": [
+        320,
+        250
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://www.jawharafm.net/ar/rss/showrss/12"
+      },
+      "name": "RSS 3",
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1,
+      "position": [
+        320,
+        380
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://news.google.com/rss/search?q=%D8%AA%D9%88%D9%86%D8%B3&hl=ar&gl=TN&ceid=TN:ar"
+      },
+      "name": "RSS 4",
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1,
+      "position": [
+        320,
+        510
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "append"
+      },
+      "name": "Merge",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 1,
+      "position": [
+        560,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const seen = new Set();\nconst cutoff = Date.now() - 1000*60*60*24;\nconst out = [];\nfor (const item of $input.all()) {\n  const j = item.json;\n  const title = (j.title||'').trim();\n  if (!title || seen.has(title)) continue;\n  seen.add(title);\n  const ts = Date.parse(j.isoDate||j.pubDate||'')||Date.now();\n  if (ts < cutoff) continue;\n  out.push({json:{title, link:j.link||''}});\n}\nreturn out.slice(0, 15);"
+      },
+      "name": "Filter & de-dupe",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        780,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const lines = $input.all().map(i => '- ' + i.json.title);\nconst prompt = \"أنت محرر نشرة أخبار إذاعية بالعربية الفصحى لإذاعة بوزيد إف إم. اكتب نشرة موجزة واضحة ومترابطة من العناوين التالية، بدون رموز ولا قوائم:\\n\\n\" + lines.join('\\n');\nreturn [{json:{prompt}}];"
+      },
+      "name": "Collect headlines",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        1000,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://generativelanguage.googleapis.com/v1beta/models/ $env.GEMINI_TEXT_MODEL || 'gemini-3.5-flash' :generateContent",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-goog-api-key",
+              "value": "= $env.GEMINI_API_KEY "
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({contents:[{parts:[{text:$json.prompt}]}]}) }}",
+        "options": {}
+      },
+      "name": "Gemini text",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        1220,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const j = $json;\nlet text='';\ntry { text = j.candidates[0].content.parts.map(p=>p.text||'').join(' '); } catch(e){}\ntext = (text||'').trim();\nreturn [{json:{bulletin:text}}];"
+      },
+      "name": "Extract bulletin",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        1440,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://generativelanguage.googleapis.com/v1beta/models/ $env.GEMINI_TTS_MODEL || 'gemini-3.1-flash-tts-preview' :generateContent",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-goog-api-key",
+              "value": "= $env.GEMINI_API_KEY "
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({contents:[{parts:[{text:$json.bulletin}]}],generationConfig:{responseModalities:['AUDIO'],speechConfig:{voiceConfig:{prebuiltVoiceConfig:{voiceName:($env.GEMINI_TTS_VOICE||'Kore')}}}}}) }}",
+        "options": {}
+      },
+      "name": "Gemini TTS",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        1660,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const j = $json;\nlet b64='';\ntry { b64 = j.candidates[0].content.parts[0].inlineData.data; } catch(e){}\nconst pcm = Buffer.from(b64, 'base64');\nconst sr=24000, ch=1, bps=16;\nconst blockAlign = ch*bps/8, byteRate = sr*blockAlign;\nconst h = Buffer.alloc(44);\nh.write('RIFF',0); h.writeUInt32LE(36+pcm.length,4); h.write('WAVE',8);\nh.write('fmt ',12); h.writeUInt32LE(16,16); h.writeUInt16LE(1,20);\nh.writeUInt16LE(ch,22); h.writeUInt32LE(sr,24); h.writeUInt32LE(byteRate,28);\nh.writeUInt16LE(blockAlign,32); h.writeUInt16LE(bps,34);\nh.write('data',36); h.writeUInt32LE(pcm.length,40);\nconst wav = Buffer.concat([h, pcm]);\nreturn [{json:{}, binary:{data:{data:wav.toString('base64'),mimeType:'audio/wav', fileName:'bulletin.wav'}}}];"
+      },
+      "name": "PCM base64 -> WAV",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        1880,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "fileName": "=/data/news/bulletin_ $now.toFormat('yyyyLLdd_HHmm') .wav",
+        "dataPropertyName": "data"
+      },
+      "name": "Save WAV",
+      "type": "n8n-nodes-base.writeBinaryFile",
+      "typeVersion": 1,
+      "position": [
+        2100,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "command": "=ffmpeg -y -loglevel error -i /data/news/bulletin_ $now.toFormat('yyyyLLdd_HHmm') .wav -codec:a libmp3lame -qscale:a 2 /data/news/bulletin_ $now.toFormat('yyyyLLdd_HHmm') .mp3"
+      },
+      "name": "WAV -> MP3 (ffmpeg)",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        2320,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Every 6h": {
+      "main": [
+        [
+          {
+            "node": "RSS 1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "RSS 2",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "RSS 3",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "RSS 4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "RSS 1": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "RSS 2": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "RSS 3": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "RSS 4": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Filter & de-dupe",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter & de-dupe": {
+      "main": [
+        [
+          {
+            "node": "Collect headlines",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Collect headlines": {
+      "main": [
+        [
+          {
+            "node": "Gemini text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini text": {
+      "main": [
+        [
+          {
+            "node": "Extract bulletin",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract bulletin": {
+      "main": [
+        [
+          {
+            "node": "Gemini TTS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini TTS": {
+      "main": [
+        [
+          {
+            "node": "PCM base64 -> WAV",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PCM base64 -> WAV": {
+      "main": [
+        [
+          {
+            "node": "Save WAV",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save WAV": {
+      "main": [
+        [
+          {
+            "node": "WAV -> MP3 (ffmpeg)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {},
+  "tags": [
+    "bouzid-fm",
+    "google"
+  ]
+}

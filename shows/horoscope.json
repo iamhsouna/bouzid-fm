@@ -1,0 +1,28 @@
+{
+  "slug": "horoscope",
+  "name": "برج اليوم",
+  "emoji": "🔮",
+  "desc": "A light, positive daily horoscope (for fun).",
+  "length_min": 1,
+  "upload_folder": "Horoscope",
+  "mix": {
+    "intro": false,
+    "outro": false,
+    "bed": true,
+    "transition": false
+  },
+  "markers": [
+    {
+      "id": "برج",
+      "display": "🔮 برج اليوم"
+    }
+  ],
+  "prompt": "إنت مقدّم فقرة أبراج ترفيهية في إذاعة بوزيد إف إم. بالدارجة التونسية، قدّم توقّع أبراج خفيف وإيجابي ليوم {date} (لمحة عامة أو لبرج واحد)، بأسلوب مرح، ونبّه في الأخر أنه للتسلية فقط.",
+  "fallback": [
+    {
+      "id": "برج",
+      "text": "برج اليوم: طاقتك إيجابية اليوم، استغلّها باش تبدأ حاجة كنت مؤجّلها. ابتسم واعمل خير. وتذكّروا — الأبراج للتسلية برك!"
+    }
+  ],
+  "title_en": "Daily Horoscope"
+}

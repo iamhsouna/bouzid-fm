@@ -1,0 +1,50 @@
+Day,Start,End,Daypart,Playlist,News every (min),Jingle
+Monday,00:00,06:00,ليل بوزيد,ليل هادئ (Ambient / Chill),120,no
+Monday,06:00,09:00,صباح الخير تونس,صباح هادئ (Calm / Jazz / Pop),60,yes
+Monday,09:00,12:00,وسط النهار,خليط النهار (Daytime Mix),60,yes
+Monday,12:00,13:00,نشرة الظهر,خليط النهار (Daytime Mix),30,yes
+Monday,13:00,18:00,بعد الظهر,شعبي ومالوف (Shaabi / Malouf),60,yes
+Monday,18:00,20:00,المساء,طرب وخليجي (Tarab / Khaleeji),60,yes
+Monday,20:00,24:00,ليلة تونسية,أجمل التونسي (Best of Tunisian),90,no
+Tuesday,00:00,06:00,ليل بوزيد,ليل هادئ (Ambient / Chill),120,no
+Tuesday,06:00,09:00,صباح الخير تونس,صباح هادئ (Calm / Jazz / Pop),60,yes
+Tuesday,09:00,12:00,وسط النهار,خليط النهار (Daytime Mix),60,yes
+Tuesday,12:00,13:00,نشرة الظهر,خليط النهار (Daytime Mix),30,yes
+Tuesday,13:00,18:00,بعد الظهر,شعبي ومالوف (Shaabi / Malouf),60,yes
+Tuesday,18:00,20:00,المساء,طرب وخليجي (Tarab / Khaleeji),60,yes
+Tuesday,20:00,24:00,ليلة تونسية,أجمل التونسي (Best of Tunisian),90,no
+Wednesday,00:00,06:00,ليل بوزيد,ليل هادئ (Ambient / Chill),120,no
+Wednesday,06:00,09:00,صباح الخير تونس,صباح هادئ (Calm / Jazz / Pop),60,yes
+Wednesday,09:00,12:00,وسط النهار,خليط النهار (Daytime Mix),60,yes
+Wednesday,12:00,13:00,نشرة الظهر,خليط النهار (Daytime Mix),30,yes
+Wednesday,13:00,18:00,بعد الظهر,شعبي ومالوف (Shaabi / Malouf),60,yes
+Wednesday,18:00,20:00,المساء,طرب وخليجي (Tarab / Khaleeji),60,yes
+Wednesday,20:00,24:00,ليلة تونسية,أجمل التونسي (Best of Tunisian),90,no
+Thursday,00:00,06:00,ليل بوزيد,ليل هادئ (Ambient / Chill),120,no
+Thursday,06:00,09:00,صباح الخير تونس,صباح هادئ (Calm / Jazz / Pop),60,yes
+Thursday,09:00,12:00,وسط النهار,خليط النهار (Daytime Mix),60,yes
+Thursday,12:00,13:00,نشرة الظهر,خليط النهار (Daytime Mix),30,yes
+Thursday,13:00,18:00,بعد الظهر,شعبي ومالوف (Shaabi / Malouf),60,yes
+Thursday,18:00,20:00,المساء,طرب وخليجي (Tarab / Khaleeji),60,yes
+Thursday,20:00,24:00,ليلة تونسية,أجمل التونسي (Best of Tunisian),90,no
+Friday,00:00,06:00,ليل بوزيد,ليل هادئ (Ambient / Chill),120,no
+Friday,06:00,09:00,صباح الخير تونس,صباح هادئ (Calm / Jazz / Pop),60,yes
+Friday,09:00,12:00,وسط النهار,خليط النهار (Daytime Mix),60,yes
+Friday,12:00,13:30,نشرة الظهر,خليط النهار (Daytime Mix),30,yes
+Friday,13:30,18:00,بعد الظهر,شعبي ومالوف (Shaabi / Malouf),60,yes
+Friday,18:00,21:00,سهرة الجمعة,كلاسيك الجمعة (Classic Malouf),90,yes
+Friday,21:00,24:00,ليلة تونسية,أجمل التونسي (Best of Tunisian),90,no
+Saturday,00:00,07:00,ليل بوزيد,ليل هادئ (Ambient / Chill),120,no
+Saturday,07:00,10:00,صباح الخير تونس,صباح هادئ (Calm / Jazz / Pop),60,yes
+Saturday,10:00,13:00,وسط النهار,خليط النهار (Daytime Mix),60,yes
+Saturday,13:00,14:00,نشرة الظهر,خليط النهار (Daytime Mix),30,yes
+Saturday,14:00,19:00,بعد الظهر,شعبي ومالوف (Shaabi / Malouf),60,yes
+Saturday,19:00,23:00,سهرة الويكاند,سهرة الويكاند (Weekend Party),90,yes
+Saturday,23:00,24:00,ليلة تونسية,أجمل التونسي (Best of Tunisian),90,no
+Sunday,00:00,07:00,ليل بوزيد,ليل هادئ (Ambient / Chill),120,no
+Sunday,07:00,10:00,صباح الخير تونس,صباح هادئ (Calm / Jazz / Pop),60,yes
+Sunday,10:00,13:00,وسط النهار,خليط النهار (Daytime Mix),60,yes
+Sunday,13:00,14:00,نشرة الظهر,خليط النهار (Daytime Mix),30,yes
+Sunday,14:00,19:00,بعد الظهر,شعبي ومالوف (Shaabi / Malouf),60,yes
+Sunday,19:00,23:00,سهرة الويكاند,سهرة الويكاند (Weekend Party),90,yes
+Sunday,23:00,24:00,ليلة تونسية,أجمل التونسي (Best of Tunisian),90,no

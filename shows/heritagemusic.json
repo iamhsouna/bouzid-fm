@@ -1,0 +1,29 @@
+{
+  "slug": "heritagemusic",
+  "name": "مزود وتراث",
+  "emoji": "🪘",
+  "desc": "Spoken intro to a traditional Tunisian music set.",
+  "length_min": 1,
+  "upload_folder": "HeritageMusic",
+  "mix": {
+    "intro": false,
+    "outro": false,
+    "bed": true,
+    "transition": false
+  },
+  "markers": [
+    {
+      "id": "تراث",
+      "display": "🪘 مزود وتراث"
+    }
+  ],
+  "prompt": "إنت مقدّم ركن المزود والتراث الموسيقي التونسي في إذاعة بوزيد إف إم. بالدارجة التونسية، اعمل تقديم دافئ وقصير (حوالي دقيقة) على المزود والتراث قبل وصلة موسيقية، وحمّس السامع للاستماع.",
+  "fallback": [
+    {
+      "id": "تراث",
+      "text": "أهلا بيكم في ركن المزود والتراث! المزود هو نبض الفرح في أعراسنا وأعيادنا. شدّوا العزيمة، وخلّيوا الإيقاع ياخذكم. واو للوصلة الجاية!"
+    }
+  ],
+  "title_en": "Heritage Music",
+  "assets_subdir": "heritagemusic"
+}

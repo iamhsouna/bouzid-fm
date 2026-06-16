@@ -1,0 +1,809 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""Bouzid FM — AzuraCast API client + CLI.
+
+A thin, dependency-free wrapper over the AzuraCast REST API, used by the
+control panel (TUI) and the news pipeline. Talks to a self-hosted AzuraCast
+(see docker-compose.yml).
+
+Auth: an API key from AzuraCast > My Account > API Keys, sent as `X-API-Key`.
+
+Env:
+    AZURACAST_URL        e.g. http://localhost   (default)
+    AZURACAST_API_KEY    your API key
+    AZURACAST_STATION    station id or shortcode  (default: bouzid)
+
+Examples:
+    python3 scripts/azuracast.py nowplaying
+    python3 scripts/azuracast.py files
+    python3 scripts/azuracast.py upload /path/bulletin.mp3 --to News/bulletin.mp3
+    python3 scripts/azuracast.py playlists
+    python3 scripts/azuracast.py skip
+"""
+import argparse
+import base64
+import importlib.util
+import json
+import os
+import sys
+import time
+import urllib.error
+import urllib.request
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+ROOT = os.path.dirname(HERE)
+
+
+def _env(k, d=""):
+    return os.environ.get(k, d)
+
+
+def _load_schedule_cfg():
+    """Load config/schedule_config.py (the single source of truth for the grid)."""
+    path = os.path.join(ROOT, "config", "schedule_config.py")
+    spec = importlib.util.spec_from_file_location("schedule_config", path)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def _hhmm(s):
+    """'09:00' -> 900, '13:30' -> 1330, '24:00' -> 2359 (AzuraCast end-of-day)."""
+    h, m = s.split(":")
+    v = int(h) * 100 + int(m)
+    return 2359 if v >= 2400 else v
+
+
+class AzuraCast:
+    def __init__(self, url=None, api_key=None, station=None):
+        self.url = (url or _env("AZURACAST_URL", "http://localhost")).rstrip("/")
+        # Hardcoded fallback so Skip / Air / upload work out-of-the-box even
+        # before the operator sets their own key (.env or Settings override it).
+        self.api_key = api_key or _env(
+            "AZURACAST_API_KEY",
+            "f9cf1ebc9e90e511:55b5f72fe1c735eabc20c0270d65a453")
+        self.station = str(station or _env("AZURACAST_STATION", "bouzid"))
+
+    def _req(self, method, path, data=None, auth=True, timeout=60, retries=3):
+        u = self.url + path
+        body = None
+        headers = {"Accept": "application/json"}
+        if data is not None:
+            body = json.dumps(data).encode("utf-8")
+            headers["Content-Type"] = "application/json"
+        if auth and self.api_key:
+            headers["X-API-Key"] = self.api_key
+        req = urllib.request.Request(u, data=body, method=method, headers=headers)
+
+        last_err = None
+        for attempt in range(max(1, int(retries))):
+            try:
+                with urllib.request.urlopen(req, timeout=timeout) as r:
+                    raw = r.read().decode("utf-8")
+                    return json.loads(raw) if raw.strip() else {}
+            except urllib.error.HTTPError as e:
+                # Retry on transient 5xx; fail fast on 4xx.
+                msg = e.read().decode("utf-8", "replace")
+                if 500 <= int(getattr(e, "code", 0)) < 600 and attempt < retries - 1:
+                    time.sleep(0.6 * (attempt + 1))
+                    last_err = RuntimeError(
+                        "AzuraCast %s %s -> HTTP %s: %s"
+                        % (method, path, e.code, msg[:200]))
+                    continue
+                raise RuntimeError("AzuraCast %s %s -> HTTP %s: %s"
+                                   % (method, path, e.code, msg[:400]))
+            except urllib.error.URLError as e:
+                last_err = e
+                if attempt < retries - 1:
+                    time.sleep(0.6 * (attempt + 1))
+                    continue
+                raise RuntimeError("Cannot reach AzuraCast at %s (%s)" % (u, e))
+        raise RuntimeError("AzuraCast request failed (%s)" % last_err)
+
+    # ---- read ----
+    def now_playing(self):
+        return self._req("GET", "/api/nowplaying/%s" % self.station, auth=False)
+
+    def stations(self):
+        return self._req("GET", "/api/stations", auth=False)
+
+    def files(self):
+        return self._req("GET", "/api/station/%s/files" % self.station)
+
+    def playlists(self):
+        return self._req("GET", "/api/station/%s/playlists" % self.station)
+
+    def requestable(self):
+        return self._req("GET", "/api/station/%s/requests" % self.station, auth=False)
+
+    # ---- write ----
+    def upload(self, local_path, dest_path=None):
+        dest = dest_path or os.path.basename(local_path)
+        with open(local_path, "rb") as f:
+            b64 = base64.b64encode(f.read()).decode("ascii")
+        return self._req("POST", "/api/station/%s/files" % self.station,
+                         data={"path": dest, "file": b64})
+
+    def create_playlist(self, name, **kw):
+        payload = {"name": name}
+        payload.update(kw)
+        return self._req("POST", "/api/station/%s/playlists" % self.station,
+                         data=payload)
+
+    def skip(self):
+        return self._req("POST", "/api/station/%s/backend/skip" % self.station,
+                         data={})
+
+    def request_song(self, request_id):
+        return self._req("POST", "/api/station/%s/request/%s"
+                         % (self.station, request_id), data={})
+
+    def queue(self):
+        return self._req("GET", "/api/station/%s/queue" % self.station)
+
+    def clear_queue(self):
+        """Empty the pre-computed AutoDJ up-next queue so a freshly submitted
+        request becomes the very next track the AutoDJ plays. Uses per-item
+        deletes (the universally supported endpoint)."""
+        try:
+            items = self.queue()
+        except RuntimeError:
+            return 0
+        if isinstance(items, dict):
+            items = items.get("rows") or items.get("items") or []
+        n = 0
+        for it in (items or []):
+            qid = it.get("id") if isinstance(it, dict) else None
+            if qid is None:
+                continue
+            try:
+                self._req("DELETE", "/api/station/%s/queue/%s"
+                          % (self.station, qid))
+                n += 1
+            except RuntimeError:
+                pass
+        return n
+
+    def station_numeric_id(self):
+        """Resolve the station's numeric id (admin endpoints need it)."""
+        try:
+            np = self.now_playing()
+            sid = (np.get("station") or {}).get("id")
+            if sid:
+                return sid
+        except RuntimeError:
+            pass
+        try:
+            for s in self.stations():
+                if (str(s.get("shortcode")) == self.station
+                        or str(s.get("id")) == self.station):
+                    return s.get("id")
+        except RuntimeError:
+            pass
+        return None
+
+    def ensure_requests_enabled(self):
+        """Turn on zero-delay song requests via the admin API.
+
+        Reloads the backend once if requests were previously off, since
+        Liquidsoap only exposes the request queue when the station config is
+        rebuilt. Raises with a clear, actionable message if the admin key is
+        not permitted to change station settings.
+        """
+        sid = self.station_numeric_id()
+        if not sid:
+            raise RuntimeError(
+                "Could not resolve the station id to enable requests. Enable "
+                "'Allow Song Requests' once in AzuraCast (Station > Profile).")
+        already = False
+        try:
+            cur = self._req("GET", "/api/admin/station/%s" % sid)
+            already = bool(cur.get("enable_requests"))
+        except RuntimeError:
+            pass
+        if already:
+            return True
+        try:
+            self._req("PUT", "/api/admin/station/%s" % sid,
+                      data={"enable_requests": True, "request_delay": 0,
+                            "request_threshold": 0})
+        except RuntimeError as e:
+            raise RuntimeError(
+                "Could not enable song requests via the admin API (%s). "
+                "Enable it once in AzuraCast: Station > Profile > General > "
+                "'Allow Song Requests' = Yes, and set Request Delay to 0."
+                % str(e)[:160])
+        print("  enabling song requests (one-time backend reload) ...")
+        try:
+            self.restart_broadcasting()
+        except RuntimeError:
+            pass
+        time.sleep(10)
+        return True
+
+    def find_file(self, needle):
+        needle = needle.lstrip("/").lower()
+        for f in self.files():
+            if needle in (f.get("path") or "").lower():
+                return f
+        return None
+
+    def ensure_playlist(self, name, **kw):
+        existing = self.playlists_by_name()
+        if name in existing:
+            return existing[name]
+        self.create_playlist(name, **kw)
+        return self.playlists_by_name().get(name)
+
+    def find_request_id(self, needle, song_id=None):
+        needle = os.path.splitext(os.path.basename(needle))[0].lower()
+        for r in self.requestable():
+            song = r.get("song") or {}
+            if song_id and str(song.get("id")) == str(song_id):
+                return r.get("request_id")
+            hay = " ".join(str(song.get(k, ""))
+                           for k in ("text", "title", "artist", "album")).lower()
+            if needle and needle in hay:
+                return r.get("request_id")
+        return None
+
+    # ---- low-level Liquidsoap / AutoDJ control (admin debug endpoints) ----
+    def telnet(self, command):
+        """Run a raw Liquidsoap telnet command on the station backend.
+
+        Documented endpoint (confirmed in AzuraCast's routes + TelnetAction,
+        which reads the `command` parameter and forwards it to the backend):
+            PUT /api/admin/debug/station/<numeric_id>/telnet  {"command": ...}
+        """
+        sid = self.station_numeric_id()
+        if not sid:
+            raise RuntimeError(
+                "Could not resolve the numeric station id needed for backend "
+                "control. Check AZURACAST_STATION and that the API key has "
+                "administrator permissions.")
+        return self._req("PUT", "/api/admin/debug/station/%s/telnet" % sid,
+                         data={"command": command})
+
+    def clear_station_queue(self):
+        """Clear + regenerate the upcoming AutoDJ queue.
+
+        Documented endpoint:
+            PUT /api/admin/debug/station/<numeric_id>/clearqueue
+        """
+        sid = self.station_numeric_id()
+        if not sid:
+            return None
+        try:
+            return self._req(
+                "PUT", "/api/admin/debug/station/%s/clearqueue" % sid)
+        except RuntimeError:
+            return None
+
+    def station_shortcode(self):
+        """Station short name (used for the on-disk media directory)."""
+        try:
+            np = self.now_playing()
+            sc = (np.get("station") or {}).get("shortcode")
+            if sc:
+                return str(sc)
+        except RuntimeError:
+            pass
+        return self.station
+
+    def media_root(self):
+        """On-disk media directory inside the AzuraCast backend container.
+
+        Standard Docker installs keep station media at
+        /var/azuracast/stations/<shortcode>/media (per the AzuraCast docs and
+        docker volume layout). Override with AZURACAST_MEDIA_ROOT for custom or
+        S3 storage locations.
+        """
+        env = _env("AZURACAST_MEDIA_ROOT", "")
+        if env:
+            return env.rstrip("/")
+        return "/var/azuracast/stations/%s/media" % self.station_shortcode()
+
+    def _np_song_text(self):
+        try:
+            np = self.now_playing()
+        except RuntimeError:
+            return ""
+        cur = (np.get("now_playing") or {}).get("song") or {}
+        return " ".join(str(cur.get(k, ""))
+                        for k in ("text", "title", "artist")).lower()
+
+    def wait_until_airing(self, needle, timeout=30):
+        """Poll now-playing until the clip identified by `needle` is on air."""
+        stem = os.path.splitext(os.path.basename(needle))[0].lower()
+        deadline = time.time() + timeout
+        while time.time() < deadline:
+            if stem and stem in self._np_song_text():
+                return True
+            time.sleep(2)
+        return False
+
+    @staticmethod
+    def _telnet_response(resp):
+        """Pull the backend's telnet reply text out of the admin-API log.
+
+        AzuraCast wraps the raw telnet response in debug log records; the
+        Liquidsoap `request.queue.push` command replies with the new request
+        id (a bare integer) when the push is accepted.
+        """
+        try:
+            for entry in (resp or {}).get("logs", []) or []:
+                ctx = entry.get("context") or {}
+                r = ctx.get("response")
+                if isinstance(r, list) and r:
+                    return str(r[0]).strip()
+                if isinstance(r, str) and r.strip():
+                    return r.strip()
+        except Exception:
+            pass
+        return ""
+
+    def play_now(self, remote_path, do_skip=True, keep=False):
+        """Cut a clip onto the air IMMEDIATELY — true breaking-news behaviour.
+
+        AzuraCast's Liquidsoap configuration defines two request queues:
+
+            requests              = request.queue(id="requests", ...)
+            radio = fallback(track_sensitive=true,  [requests, radio])
+
+            interrupting_requests = request.queue(id="interrupting_requests", ...)
+            radio = fallback(track_sensitive=false, [interrupting_requests, radio])
+
+        A normal song request lands in `requests`, which is track-sensitive and
+        sits behind general rotation, so it only swaps in at the NEXT track
+        boundary (this is the "it just plays the next song" symptom).
+
+        The `interrupting_requests` queue is track_sensitive=false, so anything
+        pushed to it cuts into the current song instantly. We push the clip
+        there via the backend telnet command — the same path AzuraCast's own
+        "interrupt" playlists use. No song-request, no skip, no queue juggling,
+        and the clip is never added to rotation, so it can't re-air.
+
+        `do_skip`/`keep` are kept only for CLI backwards-compatibility.
+        """
+        base = os.path.basename(remote_path)
+        # Wait for the upload to register so we can read its stored path.
+        f = None
+        for _ in range(15):
+            f = self.find_file(remote_path) or self.find_file(base)
+            if f:
+                break
+            time.sleep(2)
+        if not f:
+            raise RuntimeError("File not visible in AzuraCast yet: %s" % base)
+        rel = (f.get("path") or remote_path).lstrip("/")
+        abs_path = "%s/%s" % (self.media_root(), rel)
+        print("  cutting in on air now (interrupting queue) ...")
+        try:
+            resp = self.telnet("interrupting_requests.push %s" % abs_path)
+        except RuntimeError as e:
+            raise RuntimeError(
+                "Could not reach the station backend to force the clip on air "
+                "(%s). Confirm the admin API key has full administrator "
+                "permissions." % str(e)[:160])
+        # Liquidsoap replies to `<queue>.push` with the new request id (a bare
+        # integer) the moment the clip is accepted onto the interrupting queue.
+        # That is the authoritative success signal. The public now-playing feed
+        # does NOT reflect interrupting-queue tracks (same as jingles), so we
+        # use it only as best-effort extra confirmation and never fail on it.
+        reply = self._telnet_response(resp)
+        accepted = reply.isdigit()
+        confirmed = self.wait_until_airing(base, timeout=8) if accepted else False
+        return {"airing": base, "method": "interrupting_queue",
+                "media_path": abs_path, "queued": accepted,
+                "request_id": reply or None, "on_air": accepted,
+                "confirmed_now_playing": confirmed,
+                "backend_response": resp}
+
+    def set_file_playlists(self, file_id, playlist_ids):
+        return self._req("PUT", "/api/station/%s/file/%s" % (self.station, file_id),
+                         data={"playlists": [{"id": p} for p in playlist_ids]})
+
+    def delete_file(self, file_id):
+        """Remove a media file from the station library by its numeric id."""
+        return self._req("DELETE", "/api/station/%s/file/%s"
+                         % (self.station, file_id))
+
+    def rename_file(self, file_id, new_path):
+        """Rename / move a media file by editing its library path."""
+        return self._req("PUT", "/api/station/%s/file/%s"
+                         % (self.station, file_id), data={"path": new_path})
+
+    def delete_playlist(self, pid):
+        return self._req("DELETE", "/api/station/%s/playlist/%s"
+                         % (self.station, pid))
+
+    def playlists_by_name(self):
+        return {p.get("name"): p.get("id") for p in self.playlists()}
+
+    # ---- weekly scheduler (builds the Bouzid FM weekly grid on AzuraCast) ----
+    def build_schedule_plan(self):
+        """Translate config/schedule_config.py into AzuraCast playlists.
+
+        Returns a list of (name, payload, source_folders). One scheduled music
+        playlist per crate, one news playlist per distinct cadence (top-of-hour
+        for 60-min, every-N-minutes otherwise), plus a jingle playlist for the
+        dayparts that want a sting before the bulletin.
+        """
+        cfg = _load_schedule_cfg()
+        prefix = "Bouzid "
+
+        windows = {}  # daypart -> [(day_iso, start_hhmm, end_hhmm)]
+        for day_key, (_ar, _en, tmpl) in cfg.WEEK.items():
+            day_iso = day_key + 1  # AzuraCast: 1=Mon .. 7=Sun
+            for (start, end, dp) in tmpl:
+                windows.setdefault(dp, []).append((day_iso, _hhmm(start), _hhmm(end)))
+
+        def items_for(dps):
+            out = []
+            for dp in dps:
+                for (d, s, e) in windows.get(dp, []):
+                    out.append({"start_time": s, "end_time": e,
+                                "days": [d], "loop_once": False})
+            return out
+
+        plan = []
+
+        # 1) Music: group dayparts by the crate/playlist they use.
+        music_groups = {}
+        for dp, info in cfg.DAYPARTS.items():
+            if dp in windows:
+                music_groups.setdefault(info["playlist"], []).append(dp)
+        for pl, dps in music_groups.items():
+            folder = cfg.PLAYLISTS[pl]["folder"]
+            name = prefix + cfg.PLAYLISTS[pl]["label"]
+            plan.append((name, {
+                "name": name, "type": "default", "source": "songs",
+                "order": "shuffle", "is_enabled": True, "is_jingle": False,
+                "weight": 3, "include_in_requests": False,
+                "include_in_on_demand": True,
+                "schedule_items": items_for(dps),
+            }, [folder]))
+
+        # 1b) Always-on fallback (general rotation). This has NO schedule, so
+        #     AzuraCast only plays it when no scheduled daypart playlist has
+        #     playable media right now. It guarantees the station is NEVER
+        #     offline — e.g. if a daypart folder hasn't been filled yet, or in
+        #     any gap between windows. Scheduled playlists still take priority
+        #     during their time slots. It pulls from every music folder.
+        all_music_folders = sorted({cfg.PLAYLISTS[pl]["folder"]
+                                    for pl in music_groups})
+        if all_music_folders:
+            fb_name = prefix + "24/7 (All Music)"
+            plan.append((fb_name, {
+                "name": fb_name, "type": "default", "source": "songs",
+                "order": "shuffle", "is_enabled": True, "is_jingle": False,
+                "weight": 1, "include_in_requests": False,
+                "include_in_on_demand": True,
+                # no schedule_items => general rotation, always eligible
+            }, all_music_folders))
+
+        # 2) News: one playlist per distinct cadence.
+        cad_groups = {}
+        for dp, info in cfg.DAYPARTS.items():
+            if dp in windows:
+                cad_groups.setdefault(int(info["news_every"]), []).append(dp)
+        for cad, dps in sorted(cad_groups.items()):
+            name = prefix + "News %dm" % cad
+            payload = {
+                "name": name, "source": "songs",
+                "order": "sequential", "is_enabled": True, "is_jingle": False,
+                "weight": 5, "include_in_requests": False,
+                "include_in_on_demand": True,
+                "schedule_items": items_for(dps),
+            }
+            # IMPORTANT: the playlist TYPE (not just the minute field) decides
+            # whether AzuraCast interleaves the bulletin into rotation or plays
+            # it as a continuous block. With type "default" + a schedule window
+            # the news would loop for the whole daypart and music would never
+            # come back, so we use the proper cadence types here.
+            if cad == 60:
+                payload["type"] = "once_per_hour"
+                payload["play_per_hour_minute"] = 0   # top of every hour
+            else:
+                payload["type"] = "once_per_x_minutes"
+                payload["play_per_minutes"] = cad
+            plan.append((name, payload, [cfg.NEWS_FOLDER]))
+
+        # 3) Jingle: a voiced station ID injected BETWEEN songs, around the
+        #    clock. is_jingle=True => AzuraCast writes no now-playing metadata
+        #    for it (true station-ID behaviour); play_per_songs => one jingle
+        #    is dropped in after every N normal songs. No schedule_items, so it
+        #    interleaves 24/7 rather than only before the news.
+        jname = prefix + "Jingle"
+        every = int(getattr(cfg, "JINGLE_EVERY_SONGS", 4)) or 4
+        plan.append((jname, {
+            "name": jname, "type": "once_per_x_songs", "source": "songs",
+            "order": "shuffle", "is_enabled": True, "is_jingle": True,
+            "weight": 1, "include_in_requests": False,
+            "include_in_on_demand": False,
+            "play_per_songs": every,
+        }, [cfg.JINGLE_FOLDER]))
+
+        return plan
+
+    def apply_schedule(self, dry_run=False, reset=False, assign=True):
+        plan = self.build_schedule_plan()
+
+        if dry_run:
+            print("AzuraCast schedule plan (station: %s) — %d playlists\n"
+                  % (self.station, len(plan)))
+            for name, payload, folders in plan:
+                bits = []
+                if "play_per_hour_minute" in payload:
+                    bits.append("at :%02d each hour" % payload["play_per_hour_minute"])
+                if "play_per_minutes" in payload:
+                    bits.append("every %d min" % payload["play_per_minutes"])
+                if "play_per_songs" in payload:
+                    bits.append("every %d songs" % payload["play_per_songs"])
+                if payload.get("is_jingle"):
+                    bits.append("jingle")
+                print("  %-34s src=%-10s windows=%-3d %s"
+                      % (name, "/".join(folders),
+                         len(payload.get("schedule_items", [])),
+                         "(" + ", ".join(bits) + ")" if bits else ""))
+            print("\n(dry-run — nothing was sent to AzuraCast)")
+            return {"planned": len(plan), "dry_run": True}
+
+        if reset:
+            for nm, pid in list(self.playlists_by_name().items()):
+                if nm and nm.startswith("Bouzid "):
+                    self.delete_playlist(pid)
+                    print("  deleted old playlist:", nm)
+
+        for name, payload, _folders in plan:
+            self._req("POST", "/api/station/%s/playlists" % self.station,
+                      data=payload)
+            print("  created playlist:", name)
+
+        assigned = 0
+        if assign:
+            name_to_id = self.playlists_by_name()
+            folder_to_names = {}
+            for name, _payload, folders in plan:
+                for f in folders:
+                    folder_to_names.setdefault(f.lower(), set()).add(name)
+            for fobj in self.files():
+                path = (fobj.get("path") or "")
+                top = path.split("/")[0].lower() if "/" in path else ""
+                names = folder_to_names.get(top)
+                if not names:
+                    continue
+                ids = [name_to_id[n] for n in names if n in name_to_id]
+                if ids:
+                    self.set_file_playlists(fobj.get("id"), ids)
+                    assigned += 1
+            print("  assigned %d media files to playlists" % assigned)
+
+        print("Schedule applied: %d playlists on station '%s'."
+              % (len(plan), self.station))
+        return {"playlists": len(plan), "assigned": assigned}
+
+    # ---- media import + broadcasting -------------------------------------
+    AUDIO_EXTS = (".mp3", ".m4a", ".aac", ".ogg", ".oga", ".opus",
+                  ".flac", ".wav", ".wma")
+
+    def restart_broadcasting(self):
+        """Restart the station frontend+backend so new media goes live."""
+        return self._req("POST", "/api/station/%s/restart" % self.station,
+                         data={})
+
+    def import_dir(self, music_dir, verbose=True):
+        """Upload every audio file under music_dir into the AzuraCast library.
+
+        Files keep their crate sub-folder (e.g. ``daytime/song.mp3``) so the
+        weekly scheduler can assign them to the matching playlist by folder.
+        Already-present paths are skipped, so this is safe to re-run.
+        """
+        music_dir = os.path.abspath(music_dir)
+        if not os.path.isdir(music_dir):
+            raise RuntimeError("Music folder not found: %s" % music_dir)
+
+        existing = set()
+        try:
+            for f in self.files():
+                p = f.get("path")
+                if p:
+                    existing.add(p.lstrip("/"))
+        except RuntimeError:
+            pass  # empty library / station still warming up
+
+        files = []
+        for base, _dirs, names in os.walk(music_dir):
+            for n in names:
+                if n.lower().endswith(self.AUDIO_EXTS):
+                    files.append(os.path.join(base, n))
+        files.sort()
+        total = len(files)
+        if total == 0:
+            print("No audio files found under %s (has the download finished? "
+                  "check: bouzid fetch-status)" % music_dir)
+            return {"uploaded": 0, "skipped": 0, "failed": 0, "total": 0}
+
+        uploaded = skipped = failed = 0
+        for i, local in enumerate(files, 1):
+            rel = os.path.relpath(local, music_dir).replace(os.sep, "/")
+            if rel in existing:
+                skipped += 1
+                continue
+            try:
+                self.upload(local, rel)
+                uploaded += 1
+                if verbose:
+                    print("  [%d/%d] uploaded %s" % (i, total, rel))
+            except RuntimeError as e:
+                failed += 1
+                if verbose:
+                    print("  [%d/%d] FAILED   %s  (%s)"
+                          % (i, total, rel, str(e)[:140]))
+        print("Imported into AzuraCast: %d uploaded, %d already present, "
+              "%d failed (of %d audio files)."
+              % (uploaded, skipped, failed, total))
+        return {"uploaded": uploaded, "skipped": skipped,
+                "failed": failed, "total": total}
+
+    def sync_dir(self, local_dir, dest_prefix, delete_orphans=True,
+                 verbose=True):
+        """Make the AzuraCast folder <dest_prefix> match a local folder.
+
+        * Uploads local files missing remotely (matched by basename).
+        * If delete_orphans, removes remote files under <dest_prefix> that have
+          no local counterpart, so local + AzuraCast stay in match.
+
+        Only the single folder <dest_prefix> is ever touched; files in other
+        folders are never removed.
+        """
+        dest_prefix = (dest_prefix or "").strip("/")
+        local_dir = os.path.abspath(local_dir)
+        local = {}
+        if os.path.isdir(local_dir):
+            for fn in os.listdir(local_dir):
+                p = os.path.join(local_dir, fn)
+                if (os.path.isfile(p)
+                        and fn.lower().endswith(self.AUDIO_EXTS)
+                        and not fn.startswith(".")):
+                    local[fn] = p
+        remote = {}
+        try:
+            for f in self.files():
+                rp = (f.get("path") or "").lstrip("/")
+                folder = rp.rsplit("/", 1)[0] if "/" in rp else ""
+                if folder == dest_prefix:
+                    remote[os.path.basename(rp)] = f
+        except RuntimeError:
+            pass
+        uploaded = deleted = failed = 0
+        for fn, p in sorted(local.items()):
+            if fn in remote:
+                continue
+            try:
+                self.upload(p, (dest_prefix + "/" + fn) if dest_prefix else fn)
+                uploaded += 1
+                if verbose:
+                    print("  \u2191 uploaded %s/%s" % (dest_prefix, fn))
+            except Exception as e:  # noqa: BLE001
+                failed += 1
+                if verbose:
+                    print("  \u2717 upload failed %s (%s)"
+                          % (fn, str(e)[:120]))
+        if delete_orphans:
+            for fn, f in sorted(remote.items()):
+                if fn in local:
+                    continue
+                fid = f.get("id")
+                if fid is None:
+                    continue
+                try:
+                    self.delete_file(fid)
+                    deleted += 1
+                    if verbose:
+                        print("  \u2717 removed remote orphan %s/%s"
+                              % (dest_prefix, fn))
+                except Exception as e:  # noqa: BLE001
+                    failed += 1
+                    if verbose:
+                        print("  \u26a0 could not remove %s (%s)"
+                              % (fn, str(e)[:120]))
+        print("Sync %s: %d uploaded, %d removed, %d failed (%d local, "
+              "%d remote)." % (dest_prefix or "/", uploaded, deleted, failed,
+                               len(local), len(remote)))
+        return {"uploaded": uploaded, "deleted": deleted, "failed": failed,
+                "local": len(local), "remote": len(remote)}
+
+
+def _print(obj):
+    print(json.dumps(obj, ensure_ascii=False, indent=2))
+
+
+def main():
+    ap = argparse.ArgumentParser(description="AzuraCast API client")
+    sub = ap.add_subparsers(dest="cmd", required=True)
+    sub.add_parser("nowplaying")
+    sub.add_parser("stations")
+    sub.add_parser("files")
+    sub.add_parser("playlists")
+    up = sub.add_parser("upload")
+    up.add_argument("file")
+    up.add_argument("--to", default=None)
+    cp = sub.add_parser("create-playlist")
+    cp.add_argument("name")
+    sub.add_parser("skip")
+    pn = sub.add_parser("play-now",
+                        help="request a media file + skip so it airs now")
+    pn.add_argument("path", help="AzuraCast media path, e.g. Breaking/x.mp3")
+    pn.add_argument("--no-skip", action="store_true",
+                    help="queue it as the next track without skipping")
+    pn.add_argument("--keep", action="store_true",
+                    help="leave it in the requestable playlist afterwards")
+    im = sub.add_parser("import",
+                        help="upload the music library into AzuraCast")
+    im.add_argument("--dir",
+                    default=os.environ.get("MUSIC_DIR")
+                    or os.path.join(ROOT, "music"),
+                    help="music folder to import (default: $MUSIC_DIR)")
+    sub.add_parser("restart",
+                   help="restart broadcasting so new media/playlists go live")
+    sc = sub.add_parser("apply-schedule",
+                        help="build the weekly grid as AzuraCast playlists")
+    sc.add_argument("--dry-run", action="store_true",
+                    help="preview the plan without calling AzuraCast")
+    sc.add_argument("--reset", action="store_true",
+                    help="delete existing 'Bouzid ' playlists first")
+    sc.add_argument("--no-assign", action="store_true",
+                    help="do not (re)assign media files to playlists")
+    args = ap.parse_args()
+
+    ac = AzuraCast()
+    try:
+        if args.cmd == "nowplaying":
+            np = ac.now_playing()
+            st = np.get("station", {}) if isinstance(np, dict) else {}
+            cur = np.get("now_playing", {}) if isinstance(np, dict) else {}
+            song = cur.get("song", {}) if isinstance(cur, dict) else {}
+            print("Station  :", st.get("name"))
+            print("Now      :", song.get("text") or "-")
+            print("Listeners:", np.get("listeners", {}).get("current"))
+        elif args.cmd == "stations":
+            _print(ac.stations())
+        elif args.cmd == "files":
+            fs = ac.files()
+            for f in fs:
+                print(f.get("path"))
+            print("(%d files)" % len(fs))
+        elif args.cmd == "playlists":
+            for p in ac.playlists():
+                print(p.get("id"), p.get("name"))
+        elif args.cmd == "upload":
+            _print(ac.upload(args.file, args.to))
+        elif args.cmd == "create-playlist":
+            _print(ac.create_playlist(args.name))
+        elif args.cmd == "skip":
+            _print(ac.skip())
+        elif args.cmd == "play-now":
+            res = ac.play_now(args.path, do_skip=not args.no_skip,
+                              keep=args.keep)
+            _print(res)
+            if not res.get("on_air"):
+                print("  WARNING: the station backend did not accept the clip "
+                      "onto the interrupting queue (no request id returned). "
+                      "Check that media_path above exists inside the AzuraCast "
+                      "backend container, or set AZURACAST_MEDIA_ROOT.",
+                      file=sys.stderr)
+                sys.exit(2)
+        elif args.cmd == "import":
+            ac.import_dir(args.dir)
+        elif args.cmd == "restart":
+            _print(ac.restart_broadcasting())
+        elif args.cmd == "apply-schedule":
+            ac.apply_schedule(dry_run=args.dry_run, reset=args.reset,
+                              assign=not args.no_assign)
+    except RuntimeError as e:
+        sys.exit(str(e))
+
+
+if __name__ == "__main__":
+    main()

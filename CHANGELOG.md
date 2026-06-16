@@ -1,0 +1,218 @@
+# Changelog — Bouzid FM 2.0
+
+All notable changes to the 2.0 line. This is a clean rewrite of Bouzid FM:
+Google-only, TUI-first, with the real mastered station imaging.
+
+## 1.1.5 (2026-06-16)
+
+- The **app version is now always shown** — in the footer line (bottom-right,
+  e.g. “Bouzid FM — v1.1.5”) and in the header subtitle. Easy to confirm at a
+  glance which build you're running.
+- The header title now reads **Bouzid FM** instead of the class name.
+
+Note: the Reset assets / Sync (Maintenance) controls shipped in 1.1.4 — they
+live in the **Settings** tab just below **List voices**. If you didn't see them,
+you were running an older copy; the footer version makes the running build
+obvious.
+
+## 1.1.4 (2026-06-16)
+
+One-click asset reset and a real two-way AzuraCast sync, so local files and
+the on-air library stay in match.
+
+### Reset assets (Settings tab)
+- New **Reset assets** button in **Settings → Maintenance**. It wipes the
+  whole `assets/` folder and rebuilds the clean, EMPTY per-show structure
+  (`intro/outro/bed/transition/sting` for `station` + every preset), clears
+  pinned defaults, and recreates the `jingles/` pool. No audio is regenerated
+  — use the Imaging tab afterwards.
+- A timestamped backup of the old `assets/` is moved next to the app first, so
+  nothing is ever lost; `CREDITS.md` is preserved.
+- Requires a two-press confirm (warning shown in the log), like Empty library.
+- After the rebuild it triggers an **AzuraCast media rescan** automatically.
+- CLI: `bouzid reset-assets` (`--no-backup` to skip the backup).
+
+### Two-way AzuraCast sync (“stay in match”)
+- New **Sync with AzuraCast** button on the **Library** tab (syncs the
+  selected filter) and **Sync media → AzuraCast** in **Settings** (syncs every
+  show). Both confirm before running.
+- Sync is two-way per show folder: it **uploads new local files** AND
+  **removes AzuraCast files that no longer exist locally**, touching only that
+  show's folder. Delete/rename/empty already synced; this closes the loop for
+  newly added files and full reconciles.
+- CLI: `bouzid sync [show|all]` (`--no-delete` for add-only).
+
+### Reusable confirm helper
+- The armed two-press confirmation used by Empty library is now generic, so
+  Reset, Sync, and Empty all share the same safe “click again to confirm” flow
+  and correctly restore their original button labels.
+
+## 1.1.3 (2026-06-16)
+
+Imaging consistency, a clean per-show asset tree, louder/punchier mastering,
+and a remaster pass so you can perfect any episode before it airs.
+
+### Imaging Show picker = Studio's list (no duplication)
+- The Imaging tab's **Show** picker now uses the **exact same preset list as
+  the Studio tab** (`preset_options()`), instead of a separate hardcoded list
+  of six shows. There's one source of truth, so the two tabs can never drift
+  apart. The imaging roster (`assets_lib.imaging_shows()`) is derived straight
+  from the presets plus the shared `station` set.
+
+### Clean, uniform asset tree for every show
+- `assets/` was rebuilt from scratch with one tidy, identical layout for
+  **every** show (station + all presets):
+  `assets/<show>/{intro,outro,bed,transition,sting}/`.
+- The old mixed layout (top-level `beds/intro/outro/transition` for the
+  station, per-show `beds/` folders, station stings dumped in
+  `transition/sting_*.mp3`) is gone. Existing real audio was moved into its
+  correct new home; the previous tree is preserved as a backup outside the app.
+- `make_imaging.py` is now **fully preset-driven**: every show gets the full
+  set (bed, intro, outro, transition + several stings) on uniform paths.
+  Well-known shows keep curated prompts; the rest get sensible defaults
+  synthesized from their name (override with an optional `imaging` block in
+  `shows/<slug>.json`).
+
+### Stings regenerated from scratch, in the right place
+- Every show now has its own `assets/<show>/sting/` folder (previously only the
+  station had stings, and they lived under `transition/`). The folders start
+  empty after the restructure — regenerate them in one command:
+  `bouzid imaging --kind sting --replace` (needs a paid Gemini key + network).
+
+### Louder, punchier mastering (beds no longer weak)
+- Reworked `audio_mix.py`: the bed sits at a healthy resting level (`bed_gain`
+  0.72) with proper sidechain-style ducking under the voice, per-segment
+  loudness-matching, and a final limiter. The default output loudness is now
+  **−12 LUFS** (punchy) instead of the previous quieter target, so beds and
+  the overall mix come through clearly.
+
+### Remaster a generation before airing
+- Show generation now saves its voice stems + a mix manifest alongside the
+  episode, so you can **re-mix it without re-synthesizing** (fast & free).
+- New **Remaster** panel in the Studio tab and a `bouzid remaster <file>`
+  command let you tune the mix and preview, then air the version you like:
+  `--bed-gain`, `--duck`, `--voice-gain`, `--lufs`, `--intro-gain`,
+  `--outro-gain`, `--overlap`, `--fade-in`, `--fade-out`, with `--play` or
+  `--air`.
+
+## 1.1.2 (2026-06-16)
+
+A top-to-bottom rework of the control panel around **one job per screen**. The
+old workflow had News and Shows as separate tabs even though they do the same
+thing, imaging was preview-only, and every show kept its own little library.
+That's gone.
+
+### Unified Studio (news is now just a preset)
+- The **News** and **Shows** tabs are removed and replaced by a single
+  **🎙 Studio** tab. You pick a preset from one dropdown — *news, cook,
+  sidibouzid, and every other show* — and Generate, Generate + air, or Preview
+  the script. **News is a preset like any other** (it pulls live headlines
+  automatically); breaking news is the news preset with custom `--text`.
+- New presets `shows/news.json`, `shows/cook.json`, `shows/sidibouzid.json`
+  drive the one engine; the standalone `make_cook.py` / `make_sidibouzid.py`
+  scripts are deleted. `bouzid news|cook|sidibouzid` now all route through
+  `show_engine.py --show <slug>`, so the TUI and CLI behave identically.
+
+### One unified Library
+- A single **🗂 Library** tab lists **everything you generate**. A *Filter*
+  dropdown switches between *All shows*, each individual show, *Jingles*, and
+  the *Music pool* — and the same buttons (play, air, rename, duplicate,
+  re-upload, delete, empty) work for every filter. Per-show mini-libraries are
+  gone. *All shows* aggregates every show at once.
+
+### One unified Imaging tab + always-latest defaults
+- The **🎵 Imaging** tab now **generates** as well as curates. Pick a *Show*
+  (or *All shows*) and a *Kind* (or *All kinds*) and generate imaging for every
+  show at once, one whole show, one kind across shows, or just one kind of one
+  show (e.g. regenerate only the cook intro).
+- **Variants instead of overwrites.** Every generation **adds a timestamped
+  variant** — it never silently clobbers your imaging. The station
+  **automatically uses the newest variant** for each show + kind, *unless you
+  pin one as the default you like* (★ Set as default). Clear the default to go
+  back to always-latest.
+- New `scripts/assets_lib.py` resolves “newest-or-pinned” everywhere
+  (`show_engine`, `audio_mix`) and powers the variant table. `make_imaging.py`
+  gains `--show`, `--kind`, `--replace`, `--make-default`, and `--voice`. New
+  CLI: `bouzid imaging --show … --kind …`, `bouzid assets overview|list|
+  resolve|set-default|clear-default`.
+
+### Cleaner navigation
+- Tabs and hotkeys are now: `d` Dashboard · `p` Studio · `l` Library ·
+  `i` Imaging · `j` Jingles · `m` Music · `g` Settings.
+
+## 1.1.1 (2026-06-16)
+
+### Station imaging regenerator
+- **New `bouzid imaging` command** (`scripts/make_imaging.py`). Removes the
+  bundled default Pixabay imaging and regenerates the whole set —
+  intros / outros / beds / transitions / stings for the station and every show
+  — entirely with Google: **Lyria 3** for music beds and stings, **Gemini TTS**
+  for the spoken Arabic IDs (mixed under a fresh bed by `audio_mix`).
+- Writes to the exact filenames the app already expects, so nothing else
+  changes. Old files are backed up to `assets/_backup_*` first (or `--no-backup`
+  to delete). Use `--list` to preview, `--dry-run` to rehearse, `--set <slug>`
+  to limit, and `--voice <name>` to override the Gemini voice.
+- Requires a **paid** Gemini key + network access (Lyria 3 is not on the free
+  tier), so run it on your own machine.
+
+## 1.1.0 (2026-06-16)
+
+The Jingle studio gets a real workflow and AI audio engines.
+
+### Jingle studio
+- **You confirm before anything is generated.** Voiced jingles are no longer
+  written-and-built blindly by Gemini. The new flow is: type an idea, hit
+  **✍ Draft script with Gemini**, the Arabic station ID drops into an editable
+  review box, you tweak it, *then* you Generate. You can also just type your
+  own script and skip Gemini entirely.
+- **Three jingle types:**
+  - **Voiced** — your script spoken over a music bed (auto-ducked broadcast mix).
+  - **Voice only** — the clean spoken script, no bed at all (dry ID).
+  - **SFX only** — a sound-effect sting, no voice.
+- **Choose your music-bed engine** for voiced jingles: your mastered assets
+  (default), **Google Lyria 3**, or **Eleven Music** — with a prompt box to
+  describe the bed you want.
+- **Choose your SFX engine:** your mastered stings (default) or **ElevenLabs**
+  text-to-sound, generated from a prompt.
+
+### Notes
+- Lyria 3 music generation needs a **paid** Google Gemini key; if it fails the
+  app automatically falls back to your mastered bed.
+- New `.env` keys: `LYRIA_MODEL`, `ELEVENLABS_API_KEY`, `ELEVEN_SFX_MODEL`,
+  `ELEVEN_MUSIC_MODEL`.
+
+## 1.0.0 (2026-06-15)
+
+First release of the rebuilt app. Ported from the 0.2.x line **from scratch**,
+keeping every feature except the jingle builder.
+
+### Highlights
+- **Google-only.** Text and speech both run on Google Gemini
+  (`gemini-3.5-flash` for writing, `gemini-3.1-flash-tts-preview` for voice).
+  Every other provider (NVIDIA, OpenRouter, ElevenLabs, XTTS, edge-tts) and all
+  of their settings, fields and Docker services are gone.
+- **TUI-first.** `bouzid tui` opens the control panel and that is the primary
+  way to run the station. The navigation was redesigned into a logical flow:
+  **Dashboard → News → Shows → Imaging → Music → Settings**, with a live
+  Activity log at the bottom and one-key tab switching (d / n / s / i / m / g).
+- **Real mastered imaging.** Intros, outros, music beds and transition stings
+  are the produced, loudness-matched audio files — the app no longer synthesizes
+  beep tones. Each show has its own imaging under `assets/<show>/`.
+- **No jingle builder.** The synthesized-jingle feature was removed entirely
+  (no `make_jingles.py`, no jingle assets, no rebuild button).
+
+### Carried over from 0.2.x
+- AI news bulletins (live Tunisian RSS → Gemini → voiced → mixed).
+- Breaking-news flash that writes and airs instantly.
+- “Cook with Eya” daily cooking show.
+- “Story of Sidi Bouzid” daily ~3-minute culture & history show.
+- Generic preset show engine with all bundled show presets.
+- AzuraCast upload + weekly scheduling.
+- n8n automated bulletin pipeline (single Google-TTS workflow).
+- Docker Compose stack (AzuraCast + n8n).
+- Trending Tunisian music fetcher and library rescan.
+
+### Voice
+- Default voice: **Kore** (female). 30 Gemini voices available, grouped by
+  gender in the Settings tab and the `bouzid voices` command.
+- Self-throttle defaults to **15 requests/min** to stay under the free-tier cap.

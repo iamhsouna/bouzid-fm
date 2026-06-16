@@ -1,0 +1,19 @@
+{
+  "name": "نشرة الأخبار",
+  "title_en": "AI News Bulletin",
+  "emoji": "\ud83d\udcf0",
+  "desc": "Live Tunisian RSS headlines rewritten into a fus-ha radio bulletin.",
+  "length_min": 4,
+  "source": "news",
+  "voice_env": "GEMINI_TTS_VOICE",
+  "assets_subdir": "",
+  "music_subdir": "news",
+  "upload_folder": "News",
+  "feed": "none",
+  "mix": { "intro": true, "outro": true, "bed": true, "transition": false },
+  "prompt": "",
+  "markers": [],
+  "fallback": [
+    { "id": "نشرة", "text": "إلى المستمعين الكرام، أهلا بكم في نشرة أخبار بوزيد إف إم. تعذّر الاتصال بمصادر الأخبار في الوقت الحالي، وسنعود إليكم بآخر المستجدات في النشرة القادمة. شكرا لمتابعتكم، ودمتم على خير." }
+  ]
+}

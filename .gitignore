@@ -1,0 +1,22 @@
+# Bouzid FM
+.env
+data/
+music/
+*.log
+*.pid
+__pycache__/
+*.pyc
+.archive.txt
+voices/*.wav
+!voices/.gitkeep
+# user-provided station audio (keep folders, ignore the media)
+assets/**/*.mp3
+assets/**/*.wav
+assets/**/*.m4a
+assets/**/*.ogg
+assets/**/*.flac
+!assets/**/.gitkeep
+# ...but ship the generated default station elements
+!assets/**/bouzid_*.mp3
+# generated news script sidecars
+music/news/*.txt

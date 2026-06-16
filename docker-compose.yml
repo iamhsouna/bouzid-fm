@@ -1,0 +1,90 @@
+# Bouzid FM 2.0 — the radio stack (AzuraCast + n8n)
+#
+# AzuraCast ships as an all-in-one image (web UI + REST API + Icecast/Shoutcast
+# + Liquidsoap AutoDJ + database). This is the only stack Bouzid FM uses.
+#
+#   docker compose up -d
+#
+# First run:
+#   1. Open http://localhost  and complete the guided setup (create the admin).
+#   2. Create a station with shortcode "bouzid" (URL Stub: bouzid).
+#   3. My Account > API Keys > create a key, put it in .env as AZURACAST_API_KEY.
+#   4. Your music library (\$MUSIC_DIR, in your home directory) is mounted
+#      read-only at /var/azuracast/imports — `bouzid rescan` imports it via the
+#      API, or use "Import" in the UI.
+#
+# Content generation is Google-only: the n8n service just needs GEMINI_API_KEY.
+#
+# Pin the Compose project name so volume names are ALWAYS the same, no matter
+# which folder you run from. This is what makes AzuraCast's database (admin
+# account, station, and API keys) survive every code update / reinstall.
+# Belt-and-suspenders: COMPOSE_PROJECT_NAME=bouzid-fm in .env does the same for
+# older Compose versions that ignore this top-level key.
+name: bouzid-fm
+
+services:
+  azuracast:
+    image: ghcr.io/azuracast/azuracast:stable
+    container_name: bouzid-azuracast
+    restart: unless-stopped
+    ports:
+      - "${AZURACAST_HTTP_PORT:-80}:80"
+      - "${AZURACAST_HTTPS_PORT:-443}:443"
+      - "${AZURACAST_SFTP_PORT:-2022}:2022"
+      # station broadcast ports (Icecast / Shoutcast mounts)
+      - "8000-8050:8000-8050"
+    volumes:
+      # Persist the bundled MariaDB, station media, uploads and backups so a
+      # restart never loses data. Paths match AzuraCast's official sample compose.
+      - azuracast_db:/var/lib/mysql
+      - azuracast_station_data:/var/azuracast/stations
+      - azuracast_uploads:/var/azuracast/storage/uploads
+      - azuracast_backups:/var/azuracast/backups
+      # Your persistent music library (lives in your home dir, NOT the app
+      # folder), mounted read-only for the in-UI "Import" tool / API import.
+      - ${MUSIC_DIR:-./music}:/var/azuracast/imports:ro
+    environment:
+      - TZ=${TZ:-Africa/Tunis}
+      # --- Database (REQUIRED) -------------------------------------------
+      # AzuraCast bundles MariaDB. Its entrypoint refuses to initialise a fresh
+      # database unless a root-password policy is given. Without these the
+      # container crash-loops with "mysql.db doesn't exist". Do NOT change
+      # MYSQL_PASSWORD after the first boot.
+      - MYSQL_PASSWORD=azur4c457
+      - MYSQL_RANDOM_ROOT_PASSWORD=yes
+
+  # --- n8n: the automation brain (scheduled news bulletins) ---------------
+  n8n:
+    image: n8nio/n8n:latest
+    restart: unless-stopped
+    ports:
+      - "${N8N_PORT:-5678}:5678"
+    environment:
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_USER=${N8N_USER:-admin}
+      - N8N_BASIC_AUTH_PASSWORD=${N8N_PASSWORD:-bouzid2026}
+      - GENERIC_TIMEZONE=${TZ:-Africa/Tunis}
+      - N8N_SECURE_COOKIE=false
+      # Google Gemini is the only content provider — text + speech.
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - GEMINI_TEXT_MODEL=${GEMINI_TEXT_MODEL:-gemini-3.5-flash}
+      - GEMINI_TTS_MODEL=${GEMINI_TTS_MODEL:-gemini-3.1-flash-tts-preview}
+      - GEMINI_TTS_VOICE=${GEMINI_TTS_VOICE:-Kore}
+      # reach AzuraCast over the shared compose network by service name
+      - AZURACAST_URL=http://azuracast
+      - AZURACAST_API_KEY=${AZURACAST_API_KEY:-}
+      - AZURACAST_STATION=${AZURACAST_STATION:-bouzid}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      # named volume (not a host bind mount) so a clean uninstall never leaves
+      # root-owned files in the repo. Removed by: bouzid uninstall  (down -v)
+      - n8n_data:/home/node/.n8n
+      - ${MUSIC_DIR:-./music}:/music
+
+volumes:
+  azuracast_db:
+  azuracast_station_data:
+  azuracast_uploads:
+  azuracast_backups:
+  n8n_data:

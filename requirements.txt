@@ -1,0 +1,9 @@
+# Bouzid FM 2.0 Python dependencies (Google-only build).
+# Installed by install.sh into .venv (and into system python for the CLI).
+#
+# Speech and text both run on Google Gemini over plain HTTPS using only the
+# Python standard library (urllib + wave), so there is NO TTS SDK dependency.
+# ffmpeg / ffprobe (system packages) handle all audio mixing and encoding.
+
+# Control panel (TUI)
+textual>=0.60

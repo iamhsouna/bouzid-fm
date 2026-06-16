@@ -1,0 +1,28 @@
+{
+  "slug": "word",
+  "name": "كلمة وأصلها",
+  "emoji": "🔤",
+  "desc": "The origin & use of a Tunisian-dialect word.",
+  "length_min": 1,
+  "upload_folder": "Word",
+  "mix": {
+    "intro": false,
+    "outro": false,
+    "bed": true,
+    "transition": false
+  },
+  "markers": [
+    {
+      "id": "كلمة",
+      "display": "🔤 كلمة وأصلها"
+    }
+  ],
+  "prompt": "إنت مقدّم ركن لغوي خفيف في إذاعة بوزيد إف إم. بالدارجة التونسية، اختر كلمة من الدارجة التونسية، احكي على أصلها ومعناها وكيفاش تتستعمل بأمثلة طريفة. حوالي دقيقة.",
+  "fallback": [
+    {
+      "id": "كلمة",
+      "text": "كلمة اليوم: «ياسر»، ومعناها بارشا ولّا كثير. نقولوا «ياسر شكر». كلمة خفيفة وحلوة نستعملوها بارشا في تونس!"
+    }
+  ],
+  "title_en": "Word & Origin"
+}
