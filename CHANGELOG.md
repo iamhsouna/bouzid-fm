@@ -3,6 +3,31 @@
 All notable changes to the 2.0 line. This is a clean rewrite of Bouzid FM:
 Google-only, TUI-first, with the real mastered station imaging.
 
+## 1.3.0 (2026-06-16)
+
+- **Removed n8n entirely.** The n8n workflow was redundant — the Python stack
+  already does RSS → Gemini → TTS with voice FX, mixing, and direct AzuraCast
+  upload. n8n output was trapped inside the Docker container and never reached
+  broadcast. Removed: `n8n/`, `scripts/build_n8n.py`, n8n service from
+  `docker-compose.yml`, all env vars and doc references.
+
+- **Unified show commands.** `news`, `cook`, `sidibouzid` are no longer
+  standalone CLI commands — use `bouzid show news`, `bouzid show cook`,
+  `bouzid show sidibouzid`. All shows share the same flags (`--air`, `--upload`,
+  `--play`, `--script-only`, `--no-mix`, `--text`). The TUI already called
+  `show_engine.py --show <slug>` directly.
+
+- **Promote jingles to show roles.** New `scripts/use_jingle.py` copies a jingle
+  from the pool into `assets/<show>/<role>/` and pins it as the default. TUI
+  Jingles tab gains a pool picker, target-show picker, role picker, Use as…
+  button, and Refresh pool button. `_jingle_use()` now uses the selected jingle
+  (not `--latest`).
+
+- **Help menu rewritten.** Every command now has a real usage example
+  (`$ bouzid show news --upload`, `$ bouzid imaging --show cook --kind intro`,
+  etc.) and commands are grouped under clear section headers with a 6-step quick
+  start at the bottom.
+
 ## 1.2.6 (2026-06-16)
 
 - **`bouzid music-reset` now shows live progress — it was never hanging.** The
