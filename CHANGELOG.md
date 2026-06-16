@@ -3,6 +3,20 @@
 All notable changes to the 2.0 line. This is a clean rewrite of Bouzid FM:
 Google-only, TUI-first, with the real mastered station imaging.
 
+## 1.5.0 (2026-06-16)
+
+- **Auto-scheduler** (`scripts/scheduler.py`). Polls `schedule_data.json` every
+  5 minutes and generates shows before their scheduled air time (30-minute
+  lookahead by default). Handles overnight slots (e.g. midnight show detected
+  at 23:xx) and a 15-minute grace window for just-started slots.
+- **`bouzid scheduler` CLI commands.** `bouzid scheduler start|stop|status|once`.
+  `start` runs the daemon in the background with a PID file; `once` is a
+  single non‑blocking pass for cron or manual runs.
+- **Dashboard scheduler controls.** Start, Stop and Status buttons in the
+  Dashboard tab to manage the scheduler without leaving the TUI.
+- **Scheduler logs to `data/scheduler.log`.** Every check cycle logs the
+  schedule name, number of upcoming shows, and each generation result.
+
 ## 1.4.0 (2026-06-16)
 
 - **Schedule tab with full visual editing.** New dedicated tab in the TUI replaces the

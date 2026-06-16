@@ -14,6 +14,8 @@ through AzuraCast — all from one clean terminal control panel.
 
 ## What it does
 
+- **Auto-scheduler** — the auto-scheduler (`bouzid scheduler`) polls every 5 min and
+  generates shows before their air time. Runs as a background daemon.
 - **AI news** — pulls live Tunisian RSS, writes a Fus-ha bulletin with Gemini,
   voices it, mixes intro/bed/outro, and can air it automatically.
 - **Breaking news** — one command writes an urgent flash and puts it on air now.
@@ -53,12 +55,13 @@ no separate "News" or "Shows" tab any more** — every show (news included) is a
 preset you pick in Studio; every generated file lives in one Library you filter;
 all imaging is generated and curated from one Imaging tab.
 
-Navigation (one key jumps to each tab):
+Navigation (one key jumps to each tab, `s` is the Schedule tab):
 
 | Key | Tab        | What's there                                                       |
 |-----|------------|-------------------------------------------------------------------|
-| `d` | Dashboard  | Start/stop the stack, health, now-playing, skip, URLs             |
+| `d` | Dashboard  | Start/stop the stack, health, now-playing, skip, URLs, scheduler start/stop/status |
 | `p` | Studio     | **One control for every show.** Pick a preset (news, cook, sidibouzid, or any show), optionally type custom text, then Generate / Air / Preview script. News is just a preset that pulls live headlines. |
+| `s` | Schedule   | Visual schedule editor: template selector, editable time slots with start/end/daypart/show pickers, daypart properties, preset loader, Save & Apply to AzuraCast |
 | `l` | Library    | **One browser for everything you generate.** Filter by show (or *All shows*, Jingles, Music pool); the same buttons — play, air, rename, duplicate, re-upload, delete — work for every filter. |
 | `i` | Imaging    | **One screen for all imaging.** The *Show* picker is the **same preset list as the Studio tab** (no separate list to drift). Pick a preset and a kind (or all kinds) and generate intros / outros / beds / transitions / stings. Each run adds a new variant; manage variants and pin a default below. |
 | `j` | Jingles    | Draft-then-confirm jingle studio (voiced / voice-only / SFX)      |
@@ -93,6 +96,9 @@ bouzid imaging                         # generate a new variant for every show/k
 bouzid imaging --show cook --kind intro   # just the cook intro
 bouzid imaging --kind sting --replace     # regenerate ALL stings from scratch
 bouzid imaging --show station --kind bed --replace   # regen, drop old in scope
+bouzid scheduler start    # start auto-show generation daemon
+bouzid scheduler status   # check if it's running
+bouzid scheduler once     # one generation pass, then exit
 bouzid remaster <file.mp3> --bed-gain 0.8 --lufs -12 --play   # perfect the mix
 bouzid remaster <file.mp3> --duck 0.5 --air                   # then air it
 bouzid assets overview                 # see variants + which default is pinned
