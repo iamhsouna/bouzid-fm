@@ -119,7 +119,9 @@ The important keys (see `.env.example` for everything):
 | `GEMINI_TEXT_MODEL` | `gemini-3.5-flash`               | Model used to write content      |
 | `GEMINI_TTS_MODEL`  | `gemini-3.1-flash-tts-preview`   | Model used for speech            |
 | `GEMINI_TTS_VOICE`  | `Kore`                           | Station voice (female by default)|
-| `GOOGLE_TTS_RPM`    | `15`                             | Self-throttle, requests / minute |
+| `GOOGLE_TTS_RPM`    | `15`                             | TTS self-throttle, reqs / minute |
+| `LYRIA_RPM`         | `3`                              | Lyria self-throttle, reqs / minute|
+| `LYRIA_DAILY_CAP`   | `0`                              | Lyria daily cap (0 = unlimited)  |
 | `MUSIC_DIR`         | `$HOME/bouzid-music`             | Music library (kept on reinstall)|
 
 ## Project layout

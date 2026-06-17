@@ -3,6 +3,19 @@
 All notable changes to the 2.0 line. This is a clean rewrite of Bouzid FM:
 Google-only, TUI-first, with the real mastered station imaging.
 
+## 1.6.2 (2026-06-17)
+
+- **Lyria 3 rate limiting + retry.** New `_throttle()` with `LYRIA_RPM` (default
+  3), `LYRIA_DAILY_CAP`, and cross-process lock/state file (same pattern as
+  `google_tts.py`). Retries up to 6 times on HTTP 429/503 and on empty/no-audio
+  responses with exponential backoff — transient quota hiccups no longer fail.
+
+## 1.6.1 (2026-06-17)
+
+- **Fixed invalid Gemini TTS voice names.** 8 voices assigned in CURATED were
+  not in the 30-voice Gemini TTS roster (Thuban, Rhea, Mimosa, Alnasl, Procyon,
+  Castor, Electra, Risha). Replaced with valid voices.
+
 ## 1.6.0 (2026-06-17)
 
 - **Production-grade imaging prompts for all 21 shows.** Every show now has
