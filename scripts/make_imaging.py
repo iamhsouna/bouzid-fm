@@ -299,7 +299,7 @@ CURATED = {
     },
     # -- 7. RAMADAN --
     "ramadan": {
-        "voice": "Rhea",
+        "voice": "Sulafat",
         "bed": (
             "Spiritual, warm Ramadan music bed in D minor, 80 BPM. "
             "Soulful ney flute melody over soft pad strings, gentle "
@@ -327,7 +327,7 @@ CURATED = {
     },
     # -- 8. FARMER --
     "farmer": {
-        "voice": "Thuban",
+        "voice": "Achird",
         "bed": (
             "Pastoral, earthy farming music bed in G major, 92 BPM. "
             "Acoustic guitar fingerpicking, mandolin counter-melody, "
@@ -410,7 +410,7 @@ CURATED = {
     },
     # -- 11. HOROSCOPE --
     "horoscope": {
-        "voice": "Mimosa",
+        "voice": "Despina",
         "bed": (
             "Mysterious, ethereal horoscope music bed in B-flat minor, 78 BPM. "
             "Dreamy synth pads, glockenspiel melody, soft electronic "
@@ -438,7 +438,7 @@ CURATED = {
     },
     # -- 12. QUIZ --
     "quiz": {
-        "voice": "Alnasl",
+        "voice": "Puck",
         "bed": (
             "Playful, bright quiz show music bed in D major, 104 BPM. "
             "Pizzicato strings, bright xylophone, light funk guitar chops, "
@@ -466,7 +466,7 @@ CURATED = {
     },
     # -- 13. DID YOU KNOW? --
     "didyouknow": {
-        "voice": "Procyon",
+        "voice": "Sadaltager",
         "bed": (
             "Curious, light educational music bed in G major, 88 BPM. "
             "Bouncy marimba melody, soft pizzicato strings, light kick "
@@ -522,7 +522,7 @@ CURATED = {
     },
     # -- 15. WORD --
     "word": {
-        "voice": "Castor",
+        "voice": "Iapetus",
         "bed": (
             "Scholarly, thoughtful word-origin bed in C minor, 80 BPM. "
             "Warm oud and ney flute dialogue, soft frame-drum, low "
@@ -549,7 +549,7 @@ CURATED = {
     },
     # -- 16. FIGURES --
     "figures": {
-        "voice": "Electra",
+        "voice": "Alnilam",
         "bed": (
             "Historical documentary music bed in D minor, 76 BPM. "
             "Cinematic string orchestra, warm brass chorale, timpani "
@@ -577,7 +577,7 @@ CURATED = {
     },
     # -- 17. HOME --
     "home": {
-        "voice": "Rhea",
+        "voice": "Callirrhoe",
         "bed": (
             "Practical, cosy home advice bed in C major, 92 BPM. "
             "Bright acoustic guitar, soft ukulele strum, light kick "
@@ -604,7 +604,7 @@ CURATED = {
     },
     # -- 18. PRAYER --
     "prayer": {
-        "voice": "Rhea",
+        "voice": "Vindemiatrix",
         "bed": (
             "Reverent, peaceful prayer music bed in D minor, 70 BPM. "
             "Solo ney flute over soft synth pads and a warm bass drone, "
@@ -632,7 +632,7 @@ CURATED = {
     },
     # -- 19. EVENTS --
     "events": {
-        "voice": "Risha",
+        "voice": "Laomedeia",
         "bed": (
             "Bright, informative events calendar bed in C major, 96 BPM. "
             "Steady acoustic guitar strum, light piano chords, crisp kick "
@@ -660,7 +660,7 @@ CURATED = {
     },
     # -- 20. PROVERB --
     "proverb": {
-        "voice": "Electra",
+        "voice": "Rasalgethi",
         "bed": (
             "Wise, thoughtful proverb music bed in E minor, 78 BPM. "
             "Soulful oud solo with soft string pad, gentle darbouka "
@@ -688,7 +688,7 @@ CURATED = {
     },
     # -- 21. BUDGET --
     "budget": {
-        "voice": "Thuban",
+        "voice": "Algieba",
         "bed": (
             "Friendly, practical budget cooking bed in C major, 94 BPM. "
             "Acoustic guitar strumming, soft accordion melody, light "
