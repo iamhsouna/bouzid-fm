@@ -63,7 +63,7 @@ Navigation (one key jumps to each tab, `s` is the Schedule tab):
 | `p` | Studio     | **One control for every show.** Pick a preset (news, cook, sidibouzid, or any show), optionally type custom text, then Generate / Air / Preview script. News is just a preset that pulls live headlines. |
 | `s` | Schedule   | Visual schedule editor: template selector, editable time slots with start/end/daypart/show pickers, daypart properties, preset loader, Save & Apply to AzuraCast |
 | `l` | Library    | **One browser for everything you generate.** Filter by show (or *All shows*, Jingles, Music pool); the same buttons — play, air, rename, duplicate, re-upload, delete — work for every filter. |
-| `i` | Imaging    | **One screen for all imaging.** The *Show* picker is the **same preset list as the Studio tab** (no separate list to drift). Pick a preset and a kind (or all kinds) and generate intros / outros / beds / transitions / stings. Each run adds a new variant; manage variants and pin a default below. |
+| `i` | Imaging    | **One screen for all imaging.** The *Show* picker is the **same preset list as the Studio tab** (no separate list to drift). Pick a preset and a kind (or all kinds) and generate intros / outros / beds / transitions / stings. Each run adds a new variant; manage variants and pin a default below. Every show has its own **curated production-grade prompts** (key, BPM, instrumentation, arrangement) for professional, show-specific results. |
 | `j` | Jingles    | Draft-then-confirm jingle studio (voiced / voice-only / SFX)      |
 | `m` | Music      | Fetch trending music, rescan, apply the weekly schedule           |
 | `g` | Settings   | Gemini key, voice, models, throttle                               |
